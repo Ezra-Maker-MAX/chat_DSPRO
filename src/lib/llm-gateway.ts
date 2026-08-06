@@ -7,8 +7,10 @@ import { createGoogleGenerativeAI } from "@ai-sdk/google";
 
 type ProviderType = "openai" | "anthropic" | "deepseek" | "google";
 
+// The provider factory functions return structurally different client types,
+// so we use a loose type to avoid TS incompatibility across AI SDK providers.
 interface RoutedModel {
-  model: ReturnType<typeof createOpenAI> | ReturnType<typeof createAnthropic>;
+  model: any;
   modelId: string;
   provider: ProviderType;
 }

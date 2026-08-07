@@ -70,20 +70,33 @@ export default function RoleplayHub() {
   const chatEndRef = useRef<HTMLDivElement>(null);
 
   const fetchAll = useCallback(async () => {
+    let cardsOk = false;
+    let booksOk = false;
+    const errors: string[] = [];
+
+    // Load characters — never let world-book failure block this.
     try {
-      const [cardsRes, booksRes] = await Promise.all([
-        fetch("/api/characters"),
-        fetch("/api/worldbooks"),
-      ]);
+      const cardsRes = await fetch("/api/characters");
       const cardsData = await cardsRes.json();
-      const booksData = await booksRes.json();
       setCards(cardsData.cards || []);
-      setBooks(booksData.books || []);
+      cardsOk = true;
     } catch {
-      setError(t("rp.error.load"));
-    } finally {
-      setLoading(false);
+      errors.push("characters");
     }
+
+    // Load world books — independent failure, don't kill character list.
+    try {
+      const booksRes = await fetch("/api/worldbooks");
+      const booksData = await booksRes.json();
+      setBooks(booksData.books || []);
+      booksOk = true;
+    } catch {
+      errors.push("worldbooks");
+    }
+
+    if (!cardsOk) setError(t("rp.error.load"));
+    else if (errors.length > 0) console.warn("[RoleplayHub] Partial load failed:", errors.join(", "));
+    setLoading(false);
   }, [t]);
 
   useEffect(() => {

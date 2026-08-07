@@ -165,6 +165,9 @@ export const INIT_SQL = [
     scan_depth INTEGER DEFAULT 6000,
     created_at TEXT DEFAULT (datetime('now'))
   )`,
+  // Migration: add lorebook v2 columns to existing deployments.
+  // Idempotent — duplicate column name is tolerated by /api/admin/init.
+  `ALTER TABLE world_books ADD COLUMN scan_depth INTEGER DEFAULT 6000`,
 
   `CREATE TABLE IF NOT EXISTS world_book_entries (
     id TEXT PRIMARY KEY NOT NULL,
@@ -182,6 +185,12 @@ export const INIT_SQL = [
     token_budget INTEGER DEFAULT -1,
     created_at TEXT DEFAULT (datetime('now'))
   )`,
+  // Migration: add lorebook v2 columns to existing deployments.
+  `ALTER TABLE world_book_entries ADD COLUMN secondary_keys TEXT DEFAULT '[]'`,
+  `ALTER TABLE world_book_entries ADD COLUMN selective_logic TEXT DEFAULT NULL`,
+  `ALTER TABLE world_book_entries ADD COLUMN constant INTEGER DEFAULT 0`,
+  `ALTER TABLE world_book_entries ADD COLUMN case_sensitive INTEGER DEFAULT 0`,
+  `ALTER TABLE world_book_entries ADD COLUMN token_budget INTEGER DEFAULT -1`,
 
   `CREATE TABLE IF NOT EXISTS character_cards (
     id TEXT PRIMARY KEY NOT NULL,

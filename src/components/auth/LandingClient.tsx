@@ -130,11 +130,6 @@ export default function LandingClient({ session }: { session: Session | null }) 
           ))}
         </div>
       </div>
-
-      {/* Footer */}
-      <div className="absolute bottom-6 text-xs text-[var(--color-text-muted)]">
-        {t("landing.footer")}
-      </div>
     </main>
   );
 }

@@ -22,7 +22,6 @@ const en = {
   "landing.feature.invite": "Invite-only",
   "landing.feature.games": "Game Plaza",
   "landing.feature.ai": "Multi-Model AI",
-  "landing.footer": "Built for Vercel + Turso · Open source",
 
   // Join
   "join.back": "Back",
@@ -321,7 +320,6 @@ const zh: Record<keyof typeof en, string> = {
   "landing.feature.invite": "仅限邀请",
   "landing.feature.games": "游戏广场",
   "landing.feature.ai": "多模型 AI",
-  "landing.footer": "为 Vercel + Turso 构建 · 开源",
 
   // Join
   "join.back": "返回",

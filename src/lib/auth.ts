@@ -3,6 +3,7 @@ import { cookies } from "next/headers";
 import { db, schema } from "@/lib/db";
 import { eq } from "drizzle-orm";
 import { generateId } from "./utils";
+import { resolveInvite, consumeInvite } from "./invites";
 
 const JWT_SECRET = new TextEncoder().encode(
   process.env.JWT_SECRET || "chatmosphere-dev-secret-change-in-production-32chars"
@@ -62,16 +63,12 @@ export async function joinTenant(
   inviteCode: string,
   nickname: string
 ): Promise<{ token: string; tenant: typeof schema.tenants.$inferSelect } | { error: string }> {
-  // Find tenant by invite code
-  const [tenant] = await db
-    .select()
-    .from(schema.tenants)
-    .where(eq(schema.tenants.inviteCode, inviteCode.toUpperCase().replace(/\s/g, "")))
-    .limit(1);
-
-  if (!tenant) {
-    return { error: "Invalid invite code" };
+  // Resolve the invite code → tenant (supports both generated codes and the legacy column)
+  const resolved = await resolveInvite(inviteCode);
+  if ("error" in resolved) {
+    return { error: resolved.error };
   }
+  const { tenant, invite } = resolved;
 
   // Check member count
   const members = await db
@@ -116,10 +113,15 @@ export async function joinTenant(
     .set({ tokenHash: await hashToken(token) })
     .where(eq(schema.users.id, userId));
 
+  // Consume / burn the invite (single-use or count-limited)
+  if (invite?.id) {
+    await consumeInvite(invite);
+  }
+
   return { token, tenant };
 }
 
-async function hashToken(token: string): Promise<string> {
+export async function hashToken(token: string): Promise<string> {
   const encoder = new TextEncoder();
   const data = encoder.encode(token);
   const hashBuffer = await crypto.subtle.digest("SHA-256", data);

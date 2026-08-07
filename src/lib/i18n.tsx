@@ -166,6 +166,8 @@ const en = {
   "settings.routing.desc":
     "Messages in your space are automatically routed through configured LLM providers. The gateway selects the best model based on routing rules (priority + prompt matching). Set up multiple providers for fallback and load balancing. API keys are stored securely and never exposed to clients.",
   "settings.bot": "Bot & AI Gateway",
+  "settings.memberNotice":
+    "Space-wide settings (AI providers, bot, world books, members) are managed by the space admin. You can set up your own account login above so you can sign back in after logging out.",
   "settings.error.required": "Name, model, and API key are required",
   "settings.error.add": "Failed to add provider",
 
@@ -437,6 +439,8 @@ const zh: Record<keyof typeof en, string> = {
   "settings.routing.desc":
     "空间内的消息会自动路由到已配置的 LLM 提供商。网关根据路由规则（优先级 + 提示词匹配）选择最优模型。配置多个提供商可实现故障转移与负载均衡。API 密钥安全存储，绝不暴露给客户端。",
   "settings.bot": "机器人 & AI 网关",
+  "settings.memberNotice":
+    "空间级设置（AI 提供商、机器人、世界书、成员管理）由空间管理员统一配置。你可以在上方设置自己的账号密码，这样退出后还能重新登录回来。",
   "settings.error.required": "名称、模型和 API 密钥为必填项",
   "settings.error.add": "添加提供商失败",
 

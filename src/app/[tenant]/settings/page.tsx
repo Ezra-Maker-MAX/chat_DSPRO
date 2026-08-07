@@ -43,8 +43,13 @@ export default function SettingsPage() {
   };
 
   useEffect(() => {
-    fetchProviders();
-  }, []);
+    // Only admins can read/manage space-wide LLM providers
+    if (isAdmin) {
+      fetchProviders();
+    } else {
+      setLoading(false);
+    }
+  }, [isAdmin]);
 
   const handleAdd = async () => {
     setError("");
@@ -132,6 +137,16 @@ export default function SettingsPage() {
           <AccountPanel />
         </section>
 
+        {/* Non-admin notice */}
+        {!isAdmin && (
+          <div className="glass-card p-4 text-xs text-[var(--color-text-secondary)] leading-relaxed">
+            {t("settings.memberNotice")}
+          </div>
+        )}
+
+        {/* Admin-only: space-wide configuration */}
+        {isAdmin && (
+        <>
         {/* LLM Providers */}
         <section>
           <div className="flex items-center justify-between mb-4">
@@ -322,6 +337,8 @@ export default function SettingsPage() {
           </div>
           <WorldBooksManager />
         </section>
+        </>
+        )}
 
         {/* Members manager (admin only) */}
         {isAdmin && (

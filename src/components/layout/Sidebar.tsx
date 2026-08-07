@@ -162,23 +162,21 @@ export default function Sidebar({
           {t("sidebar.games")}
         </Link>
 
-        {userRole === "admin" && (
-          <Link
-            href={`/${tenantSlug}/settings`}
-            onClick={onClose}
-            className={`
-              flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm transition-all duration-150
-              ${
-                pathname.includes("/settings")
-                  ? "bg-[var(--color-accent-muted)] text-[var(--color-accent-glow)]"
-                  : "text-[var(--color-text-secondary)] hover:bg-[var(--color-bg-hover)] hover:text-[var(--color-text-primary)]"
-              }
-            `}
-          >
-            <Settings size={16} />
-            {t("sidebar.settings")}
-          </Link>
-        )}
+        <Link
+          href={`/${tenantSlug}/settings`}
+          onClick={onClose}
+          className={`
+            flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm transition-all duration-150
+            ${
+              pathname.includes("/settings")
+                ? "bg-[var(--color-accent-muted)] text-[var(--color-accent-glow)]"
+                : "text-[var(--color-text-secondary)] hover:bg-[var(--color-bg-hover)] hover:text-[var(--color-text-primary)]"
+            }
+          `}
+        >
+          <Settings size={16} />
+          {t("sidebar.settings")}
+        </Link>
 
         <button
           onClick={() => { handleLogout(); onClose?.(); }}

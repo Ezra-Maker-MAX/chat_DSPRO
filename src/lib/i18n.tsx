@@ -281,6 +281,30 @@ const en = {
   "admin.users.clearConfirm": "Remove {name}'s account? They will need an invite code to rejoin.",
   "admin.users.error": "Failed to load members",
 
+  // Emergency recovery (admin escape hatch)
+  "recover.section": "Emergency recovery",
+  "recover.title": "Reset a user's password",
+  "recover.warn":
+    "This uses the root-level INIT_KEY to reset anyone's credentials in this space — even if they're locked out. Treat it like a master key: only use it when a member can't log in.",
+  "recover.tenant.label": "Space slug",
+  "recover.tenant.ph": "demo-space",
+  "recover.nickname.label": "Nickname",
+  "recover.nickname.ph": "user's display nickname",
+  "recover.username.label": "New login username",
+  "recover.username.ph": "ascii-name (not nickname)",
+  "recover.password.label": "New password",
+  "recover.initKey.label": "INIT_KEY",
+  "recover.initKey.ph": "Paste your INIT_KEY",
+  "recover.initKey.hint": "Set in Vercel → Project → Settings → Environment Variables.",
+  "recover.submit": "Reset credentials",
+  "recover.error.initKey": "INIT_KEY is required",
+  "recover.error.tenant": "Space slug is required",
+  "recover.error.nickname": "Nickname is required",
+  "recover.error.username": "Username must be 3-24 characters (letters, numbers, _ or -)",
+  "recover.error.password": "Password must be at least 6 characters",
+  "recover.success":
+    "Reset OK → {nickname} can now log in with username {username} in space {tenantSlug}.",
+
   // Language switcher
   "lang.label": "Language",
   "lang.en": "English",
@@ -553,6 +577,30 @@ const zh: Record<keyof typeof en, string> = {
   "admin.users.setDesc": "为 {name} 设置用户名和密码以支持登录。",
   "admin.users.clearConfirm": "移除 {name} 的账号？他们需要新的邀请码才能重新加入。",
   "admin.users.error": "加载成员失败",
+
+  // 紧急恢复（管理员逃生通道）
+  "recover.section": "紧急恢复",
+  "recover.title": "重置某用户的密码",
+  "recover.warn":
+    "这会用根级 INIT_KEY 重置本空间任意用户的登录凭据——即使对方（或你自己）被锁在登录页外也能用。请把它当作主钥匙：仅在成员无法登录时使用。",
+  "recover.tenant.label": "空间标识",
+  "recover.tenant.ph": "demo-space",
+  "recover.nickname.label": "昵称",
+  "recover.nickname.ph": "用户显示的昵称",
+  "recover.username.label": "新登录用户名",
+  "recover.username.ph": "ASCII 短名（不是昵称）",
+  "recover.password.label": "新密码",
+  "recover.initKey.label": "INIT_KEY",
+  "recover.initKey.ph": "粘贴你的 INIT_KEY",
+  "recover.initKey.hint": "在 Vercel → 项目 → 设置 → 环境变量 里配置。",
+  "recover.submit": "重置凭据",
+  "recover.error.initKey": "需要 INIT_KEY",
+  "recover.error.tenant": "需要空间标识",
+  "recover.error.nickname": "需要昵称",
+  "recover.error.username": "用户名须为 3-24 个字符（字母/数字/下划线/连字符）",
+  "recover.error.password": "密码至少 6 位",
+  "recover.success":
+    "重置成功 → {nickname} 现在可用用户名 {username} 登录空间 {tenantSlug}。",
 
   // Language switcher
   "lang.label": "语言",

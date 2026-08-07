@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import ParticleBackground from "@/components/layout/ParticleBackground";
 import { ArrowRight, Sparkles, Users, Shield, Gamepad2, Cpu } from "lucide-react";
 

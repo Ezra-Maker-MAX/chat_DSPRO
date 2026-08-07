@@ -118,6 +118,88 @@ export const INIT_SQL = [
     created_at TEXT DEFAULT (datetime('now'))
   )`,
 
+  `CREATE TABLE IF NOT EXISTS bot_profiles (
+    id TEXT PRIMARY KEY NOT NULL,
+    tenant_id TEXT NOT NULL REFERENCES tenants(id),
+    name TEXT NOT NULL DEFAULT 'Chatmosphere Bot',
+    avatar_seed TEXT NOT NULL DEFAULT 'bot',
+    system_prompt TEXT DEFAULT 'You are a helpful assistant inside an anonymous chat space. You read the conversation and reply naturally. Keep replies concise.',
+    is_enabled INTEGER DEFAULT 1,
+    image_provider TEXT,
+    image_model TEXT,
+    image_api_key TEXT,
+    image_base_url TEXT,
+    image_cooldown_ms INTEGER DEFAULT 180000,
+    last_image_at TEXT,
+    created_at TEXT DEFAULT (datetime('now'))
+  )`,
+  `CREATE UNIQUE INDEX IF NOT EXISTS bot_tenant_unique ON bot_profiles(tenant_id)`,
+
+  `CREATE TABLE IF NOT EXISTS bot_image_jobs (
+    id TEXT PRIMARY KEY NOT NULL,
+    tenant_id TEXT NOT NULL REFERENCES tenants(id),
+    channel_id TEXT NOT NULL REFERENCES channels(id),
+    requested_by TEXT NOT NULL REFERENCES users(id),
+    prompt TEXT NOT NULL,
+    status TEXT DEFAULT 'queued',
+    image_url TEXT,
+    error TEXT,
+    position INTEGER DEFAULT 0,
+    created_at TEXT DEFAULT (datetime('now')),
+    processed_at TEXT
+  )`,
+
+  `CREATE TABLE IF NOT EXISTS world_books (
+    id TEXT PRIMARY KEY NOT NULL,
+    tenant_id TEXT NOT NULL REFERENCES tenants(id),
+    created_by TEXT REFERENCES users(id),
+    name TEXT NOT NULL,
+    description TEXT DEFAULT '',
+    created_at TEXT DEFAULT (datetime('now'))
+  )`,
+
+  `CREATE TABLE IF NOT EXISTS world_book_entries (
+    id TEXT PRIMARY KEY NOT NULL,
+    world_book_id TEXT NOT NULL REFERENCES world_books(id),
+    keys TEXT DEFAULT '[]',
+    content TEXT NOT NULL,
+    insertion_order INTEGER DEFAULT 0,
+    enabled INTEGER DEFAULT 1,
+    priority INTEGER DEFAULT 10,
+    position TEXT DEFAULT 'before_char',
+    created_at TEXT DEFAULT (datetime('now'))
+  )`,
+
+  `CREATE TABLE IF NOT EXISTS character_cards (
+    id TEXT PRIMARY KEY NOT NULL,
+    tenant_id TEXT NOT NULL REFERENCES tenants(id),
+    created_by TEXT REFERENCES users(id),
+    name TEXT NOT NULL,
+    description TEXT DEFAULT '',
+    personality TEXT DEFAULT '',
+    scenario TEXT DEFAULT '',
+    first_mes TEXT DEFAULT '',
+    mes_example TEXT DEFAULT '',
+    system_prompt TEXT DEFAULT '',
+    post_history_instructions TEXT DEFAULT '',
+    avatar_seed TEXT DEFAULT 'char',
+    world_book_id TEXT REFERENCES world_books(id),
+    is_active INTEGER DEFAULT 1,
+    created_at TEXT DEFAULT (datetime('now')),
+    updated_at TEXT DEFAULT (datetime('now'))
+  )`,
+
+  `CREATE TABLE IF NOT EXISTS roleplay_sessions (
+    id TEXT PRIMARY KEY NOT NULL,
+    tenant_id TEXT NOT NULL REFERENCES tenants(id),
+    user_id TEXT NOT NULL REFERENCES users(id),
+    character_id TEXT NOT NULL REFERENCES character_cards(id),
+    channel_id TEXT REFERENCES channels(id),
+    history TEXT DEFAULT '[]',
+    created_at TEXT DEFAULT (datetime('now')),
+    updated_at TEXT DEFAULT (datetime('now'))
+  )`,
+
   // Seed: default demo tenant
   `INSERT OR IGNORE INTO tenants (id, name, slug, invite_code, description, max_members, allow_media, allow_voice, allow_video)
    VALUES ('tnt_demo0000000001', 'Demo Space', 'demo-space', 'DEMO-CODE-1234',

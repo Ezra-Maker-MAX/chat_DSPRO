@@ -1,7 +1,9 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Settings, Cpu, Plus, Trash2, Loader2, Check, X, Key, Globe } from "lucide-react";
+import { Settings, Cpu, Plus, Trash2, Loader2, Check, X, Key, Globe, Bot, BookOpen } from "lucide-react";
+import BotSettings from "@/components/settings/BotSettings";
+import WorldBooksManager from "@/components/settings/WorldBooksManager";
 
 interface LLMProvider {
   id: string;
@@ -288,6 +290,24 @@ export default function SettingsPage() {
             Set up multiple providers for fallback and load balancing.
             API keys are stored securely and never exposed to clients.
           </p>
+        </section>
+
+        {/* Bot & AI Gateway */}
+        <section className="mt-8">
+          <div className="flex items-center gap-2 mb-4">
+            <Bot size={16} className="text-[var(--color-teal)]" />
+            <h2 className="font-semibold text-sm">Bot & AI Gateway</h2>
+          </div>
+          <BotSettings />
+        </section>
+
+        {/* World Books */}
+        <section className="mt-8">
+          <div className="flex items-center gap-2 mb-4">
+            <BookOpen size={16} className="text-[var(--color-accent-glow)]" />
+            <h2 className="font-semibold text-sm">World Books (lore)</h2>
+          </div>
+          <WorldBooksManager />
         </section>
       </div>
     </div>

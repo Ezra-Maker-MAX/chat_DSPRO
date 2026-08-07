@@ -1,19 +1,8 @@
 import { NextRequest } from "next/server";
 import { getSession } from "@/lib/auth";
 import { db, schema } from "@/lib/db";
-import { eq, and, gt } from "drizzle-orm";
-
-// In-memory subscription registry (per-process, not scalable across instances)
-// For production, use Redis pub/sub or a service like Pusher/Ably
-const subscribers = new Map<string, Set<(data: string) => void>>();
-
-export function broadcastToChannel(channelId: string, data: object) {
-  const subs = subscribers.get(channelId);
-  if (subs) {
-    const payload = `data: ${JSON.stringify(data)}\n\n`;
-    subs.forEach((send) => send(payload));
-  }
-}
+import { eq, and } from "drizzle-orm";
+import { registerSubscriber } from "@/lib/sse";
 
 export async function GET(req: NextRequest) {
   const session = await getSession();
@@ -61,9 +50,6 @@ export async function GET(req: NextRequest) {
       );
 
       // Register subscriber
-      if (!subscribers.has(channelId)) {
-        subscribers.set(channelId, new Set());
-      }
       const send = (data: string) => {
         if (!isClosed) {
           try {
@@ -73,7 +59,7 @@ export async function GET(req: NextRequest) {
           }
         }
       };
-      subscribers.get(channelId)!.add(send);
+      const unregister = registerSubscriber(channelId, send);
 
       // Heartbeat every 15s to keep connection alive
       const heartbeat = setInterval(() => {
@@ -90,7 +76,7 @@ export async function GET(req: NextRequest) {
       req.signal.addEventListener("abort", () => {
         isClosed = true;
         clearInterval(heartbeat);
-        subscribers.get(channelId)?.delete(send);
+        unregister();
         // Mark user offline
         db.update(schema.users)
           .set({ isOnline: false, lastSeen: new Date().toISOString() })

@@ -86,6 +86,27 @@ export default function ChatArea({
 
   const handleSend = useCallback(
     async (content: string, mediaIds: string[]) => {
+      // Slash commands: route to the bot, still show the user's command message
+      if (content.trim().startsWith("/") && mediaIds.length === 0) {
+        // Post the command as a normal message first
+        const res = await fetch("/api/chat/messages", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ channelId, content, type: "text", mediaIds: [] }),
+        });
+        const data = await res.json();
+        if (data.message) {
+          setMessages((prev) => [...prev, data.message]);
+        }
+        // Fire the bot command handler (replies arrive via SSE)
+        fetch("/api/bot/commands", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ channelId, content }),
+        }).catch(() => {});
+        return;
+      }
+
       // Optimistic add
       const tempId = `temp_${Date.now()}`;
       const optimistic: Message = {

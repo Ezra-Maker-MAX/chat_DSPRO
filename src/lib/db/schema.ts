@@ -129,3 +129,95 @@ export const mcpPlugins = sqliteTable("mcp_plugins", {
   isActive: integer("is_active", { mode: "boolean" }).default(true),
   createdAt: text("created_at").default(sql`(datetime('now'))`),
 });
+
+// ============== Bot Profile (one bot per tenant) ==============
+export const botProfiles = sqliteTable("bot_profiles", {
+  id: text("id").primaryKey(),
+  tenantId: text("tenant_id").notNull().references(() => tenants.id),
+  name: text("name").notNull().default("Chatmosphere Bot"),
+  avatarSeed: text("avatar_seed").notNull().default("bot"),
+  systemPrompt: text("system_prompt").default(
+    "You are a helpful assistant inside an anonymous chat space. " +
+    "You read the conversation and reply naturally. Keep replies concise."
+  ),
+  isEnabled: integer("is_enabled", { mode: "boolean" }).default(true),
+  // Image generation gateway settings
+  imageProvider: text("image_provider"), // e.g. "openai" | "custom"
+  imageModel: text("image_model"), // e.g. "gpt-image-1" | "dall-e-3"
+  imageApiKey: text("image_api_key"),
+  imageBaseUrl: text("image_base_url"),
+  imageCooldownMs: integer("image_cooldown_ms").default(180000), // 3 min
+  lastImageAt: text("last_image_at"), // ISO timestamp of last completed image
+  createdAt: text("created_at").default(sql`(datetime('now'))`),
+}, (table) => [
+  uniqueIndex("bot_tenant_unique").on(table.tenantId),
+]);
+
+// ============== Bot Image Queue ==============
+export const botImageJobs = sqliteTable("bot_image_jobs", {
+  id: text("id").primaryKey(),
+  tenantId: text("tenant_id").notNull().references(() => tenants.id),
+  channelId: text("channel_id").notNull().references(() => channels.id),
+  requestedBy: text("requested_by").notNull().references(() => users.id),
+  prompt: text("prompt").notNull(),
+  status: text("status").default("queued"), // "queued" | "processing" | "done" | "failed"
+  imageUrl: text("image_url"), // Vercel Blob URL of the generated image
+  error: text("error"),
+  position: integer("position").default(0), // queue order
+  createdAt: text("created_at").default(sql`(datetime('now'))`),
+  processedAt: text("processed_at"),
+});
+
+// ============== Character Cards (SillyTavern-style) ==============
+export const characterCards = sqliteTable("character_cards", {
+  id: text("id").primaryKey(),
+  tenantId: text("tenant_id").notNull().references(() => tenants.id),
+  createdBy: text("created_by").references(() => users.id),
+  name: text("name").notNull(),
+  description: text("description").default(""),
+  personality: text("personality").default(""),
+  scenario: text("scenario").default(""),
+  firstMes: text("first_mes").default(""),
+  mesExample: text("mes_example").default(""),
+  systemPrompt: text("system_prompt").default(""),
+  postHistoryInstructions: text("post_history_instructions").default(""),
+  avatarSeed: text("avatar_seed").default("char"),
+  worldBookId: text("world_book_id").references(() => worldBooks.id),
+  isActive: integer("is_active", { mode: "boolean" }).default(true),
+  createdAt: text("created_at").default(sql`(datetime('now'))`),
+  updatedAt: text("updated_at").default(sql`(datetime('now'))`),
+});
+
+// ============== World Books (Lorebook, SillyTavern-style) ==============
+export const worldBooks = sqliteTable("world_books", {
+  id: text("id").primaryKey(),
+  tenantId: text("tenant_id").notNull().references(() => tenants.id),
+  createdBy: text("created_by").references(() => users.id),
+  name: text("name").notNull(),
+  description: text("description").default(""),
+  createdAt: text("created_at").default(sql`(datetime('now'))`),
+});
+
+export const worldBookEntries = sqliteTable("world_book_entries", {
+  id: text("id").primaryKey(),
+  worldBookId: text("world_book_id").notNull().references(() => worldBooks.id),
+  keys: text("keys").default("[]"), // JSON array of trigger keywords
+  content: text("content").notNull(),
+  insertionOrder: integer("insertion_order").default(0),
+  enabled: integer("enabled", { mode: "boolean" }).default(true),
+  priority: integer("priority").default(10),
+  position: text("position").default("before_char"), // "before_char" | "after_char"
+  createdAt: text("created_at").default(sql`(datetime('now'))`),
+});
+
+// ============== Roleplay Sessions ==============
+export const roleplaySessions = sqliteTable("roleplay_sessions", {
+  id: text("id").primaryKey(),
+  tenantId: text("tenant_id").notNull().references(() => tenants.id),
+  userId: text("user_id").notNull().references(() => users.id),
+  characterId: text("character_id").notNull().references(() => characterCards.id),
+  channelId: text("channel_id").references(() => channels.id),
+  history: text("history").default("[]"), // JSON array of {role, content}
+  createdAt: text("created_at").default(sql`(datetime('now'))`),
+  updatedAt: text("updated_at").default(sql`(datetime('now'))`),
+});

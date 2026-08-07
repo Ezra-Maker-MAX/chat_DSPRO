@@ -2,7 +2,8 @@
 
 import { useState, useEffect } from "react";
 import { useParams } from "next/navigation";
-import { Gamepad2, Download, Trash2, Loader2, Puzzle, Wrench, Brain, Heart, ExternalLink } from "lucide-react";
+import { Gamepad2, Download, Trash2, Loader2, Puzzle, Wrench, Brain, Heart, ExternalLink, Bot } from "lucide-react";
+import RoleplayHub from "@/components/roleplay/RoleplayHub";
 
 interface Plugin {
   id: string;
@@ -38,6 +39,7 @@ const categoryColors: Record<string, string> = {
 
 export default function GamesPage() {
   const { tenant } = useParams();
+  const [tab, setTab] = useState<"marketplace" | "characters">("marketplace");
   const [marketplace, setMarketplace] = useState<Plugin[]>([]);
   const [installed, setInstalled] = useState<InstalledPlugin[]>([]);
   const [loading, setLoading] = useState(true);
@@ -101,6 +103,33 @@ export default function GamesPage() {
     );
   }
 
+  if (tab === "characters") {
+    return (
+      <div className="h-dvh overflow-hidden flex flex-col">
+        {/* Tabs */}
+        <div className="flex items-center gap-1 px-4 sm:px-6 pt-4 shrink-0">
+          <button
+            onClick={() => setTab("marketplace")}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)]"
+          >
+            <Puzzle size={12} />
+            Plugins
+          </button>
+          <button
+            onClick={() => setTab("characters")}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium bg-[var(--color-teal-muted)] text-[var(--color-teal)]"
+          >
+            <Bot size={12} />
+            Characters
+          </button>
+        </div>
+        <div className="flex-1 overflow-hidden mt-3">
+          <RoleplayHub />
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="h-dvh overflow-y-auto p-4 sm:p-6 pt-16 md:pt-6">
       <div className="max-w-4xl mx-auto">
@@ -117,6 +146,15 @@ export default function GamesPage() {
           <p className="text-sm text-[var(--color-text-secondary)]">
             Install MCP plugins to add games, utilities, and AI tools to your space.
           </p>
+
+          {/* Tab switch */}
+          <button
+            onClick={() => setTab("characters")}
+            className="mt-4 inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-[var(--color-teal-muted)] text-[var(--color-teal)] text-sm font-medium hover:bg-[var(--color-teal)] hover:text-[var(--color-bg-deep)] transition-colors"
+          >
+            <Bot size={16} />
+            Try Characters (roleplay)
+          </button>
         </div>
 
         {/* Error */}

@@ -28,6 +28,7 @@ interface Props {
 }
 
 function Avatar({ seed, nickname }: { seed: string; nickname: string }) {
+  const isBot = seed.startsWith("bot_") || nickname.toLowerCase().includes("bot");
   // Deterministic color from seed
   let hash = 0;
   for (let i = 0; i < seed.length; i++) {
@@ -39,12 +40,21 @@ function Avatar({ seed, nickname }: { seed: string; nickname: string }) {
   return (
     <div
       className="w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold shrink-0 font-[family-name:var(--font-display)]"
-      style={{
-        background: `linear-gradient(135deg, hsl(${hue}, 60%, 45%), hsl(${hue + 30}, 50%, 35%))`,
-        color: "white",
-      }}
+      style={
+        isBot
+          ? {
+              background:
+                "linear-gradient(135deg, var(--color-teal), var(--color-accent))",
+              color: "white",
+              boxShadow: "0 0 12px rgba(0,210,210,0.35)",
+            }
+          : {
+              background: `linear-gradient(135deg, hsl(${hue}, 60%, 45%), hsl(${hue + 30}, 50%, 35%))`,
+              color: "white",
+            }
+      }
     >
-      {initial}
+      {isBot ? "🤖" : initial}
     </div>
   );
 }
@@ -61,6 +71,8 @@ export default function MessageBubble({ message, isOwn }: Props) {
       </div>
     );
   }
+
+  const isBot = message.userId.startsWith("bot_") || message.avatarSeed?.startsWith("bot_");
 
   return (
     <div
@@ -111,7 +123,9 @@ export default function MessageBubble({ message, isOwn }: Props) {
               ${
                 isOwn
                   ? "bg-[var(--color-accent)] text-white rounded-tr-md"
-                  : "bg-[var(--color-bg-elevated)] text-[var(--color-text-primary)] rounded-tl-md"
+                  : isBot
+                    ? "bg-[var(--color-teal-muted)] border border-[var(--color-teal)]/20 text-[var(--color-text-primary)] rounded-tl-md"
+                    : "bg-[var(--color-bg-elevated)] text-[var(--color-text-primary)] rounded-tl-md"
               }
             `}
           >

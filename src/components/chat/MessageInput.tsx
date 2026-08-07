@@ -1,7 +1,14 @@
 "use client";
 
-import { useState, useRef, useCallback } from "react";
+import { useState, useRef, useCallback, useEffect } from "react";
 import { Send, ImagePlus, Mic, X, Play, Square } from "lucide-react";
+
+const BOT_COMMANDS = [
+  { name: "imagine", usage: "/imagine <description>", desc: "Generate an image (3-min cooldown, queued)" },
+  { name: "chat", usage: "/chat <message>", desc: "Talk to the bot with chat context" },
+  { name: "queue", usage: "/queue", desc: "Show image queue status" },
+  { name: "help", usage: "/help", desc: "List all bot commands" },
+];
 
 interface Props {
   channelId: string;
@@ -18,10 +25,31 @@ export default function MessageInput({ channelId, onSend, allowMedia, allowVoice
   const [recording, setRecording] = useState(false);
   const [audioBlob, setAudioBlob] = useState<Blob | null>(null);
   const [audioUrl, setAudioUrl] = useState<string | null>(null);
+  const [showCommands, setShowCommands] = useState(false);
+  const [activeCmd, setActiveCmd] = useState(0);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const chunksRef = useRef<Blob[]>([]);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+
+  // Slash-command autocomplete
+  useEffect(() => {
+    const text = content.trimStart();
+    if (text.startsWith("/") && !text.includes(" ")) {
+      const query = text.slice(1).toLowerCase();
+      const matches = BOT_COMMANDS.filter((c) => c.name.startsWith(query));
+      setShowCommands(matches.length > 0);
+      setActiveCmd(0);
+    } else {
+      setShowCommands(false);
+    }
+  }, [content]);
+
+  const applyCommand = (name: string) => {
+    setContent(`/${name} `);
+    setShowCommands(false);
+    textareaRef.current?.focus();
+  };
 
   const handleSend = async () => {
     const trimmed = content.trim();
@@ -43,6 +71,32 @@ export default function MessageInput({ channelId, onSend, allowMedia, allowVoice
   };
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (showCommands) {
+      const visible = BOT_COMMANDS.filter((c) =>
+        c.name.startsWith(content.trimStart().slice(1).toLowerCase())
+      );
+      if (e.key === "ArrowDown") {
+        e.preventDefault();
+        setActiveCmd((i) => (i + 1) % visible.length);
+        return;
+      }
+      if (e.key === "ArrowUp") {
+        e.preventDefault();
+        setActiveCmd((i) => (i - 1 + visible.length) % visible.length);
+        return;
+      }
+      if (e.key === "Tab" || e.key === "Enter") {
+        e.preventDefault();
+        if (visible[activeCmd]) {
+          applyCommand(visible[activeCmd].name);
+        }
+        return;
+      }
+      if (e.key === "Escape") {
+        setShowCommands(false);
+        return;
+      }
+    }
     if (e.key === "Enter" && !e.shiftKey) {
       e.preventDefault();
       handleSend();
@@ -132,7 +186,7 @@ export default function MessageInput({ channelId, onSend, allowMedia, allowVoice
   };
 
   return (
-    <div className="border-t border-[var(--color-border)] bg-[var(--color-bg-base)] px-4 py-3">
+    <div className="border-t border-[var(--color-border)] bg-[var(--color-bg-base)] px-4 py-3 relative">
       {/* Uploaded media previews */}
       {uploadedMedia.length > 0 && (
         <div className="flex gap-2 mb-3 flex-wrap">
@@ -183,8 +237,43 @@ export default function MessageInput({ channelId, onSend, allowMedia, allowVoice
         </div>
       )}
 
+      {/* Slash-command palette */}
+      {showCommands && (
+        <div className="absolute bottom-full left-4 right-4 mb-2 rounded-xl border border-[var(--color-border)] bg-[var(--color-bg-elevated)] shadow-[0_10px_40px_rgba(0,0,0,0.5)] overflow-hidden z-30 animate-fade-in">
+          <div className="px-4 py-2 text-[10px] uppercase tracking-wider text-[var(--color-text-muted)] border-b border-[var(--color-border)]">
+            Bot commands
+          </div>
+          {BOT_COMMANDS.filter((c) =>
+            c.name.startsWith(content.trimStart().slice(1).toLowerCase())
+          ).map((cmd, i) => (
+            <button
+              key={cmd.name}
+              onClick={() => applyCommand(cmd.name)}
+              onMouseEnter={() => setActiveCmd(i)}
+              className={`w-full flex items-center gap-3 px-4 py-2.5 text-left transition-colors ${
+                i === activeCmd
+                  ? "bg-[var(--color-accent-muted)]"
+                  : "hover:bg-[var(--color-bg-hover)]"
+              }`}
+            >
+              <span className="font-mono text-sm text-[var(--color-accent-glow)] shrink-0">
+                /{cmd.name}
+              </span>
+              <span className="flex-1 min-w-0">
+                <span className="block text-xs text-[var(--color-text-primary)] truncate">
+                  {cmd.desc}
+                </span>
+              </span>
+              <span className="text-[10px] text-[var(--color-text-muted)] shrink-0">
+                Tab ↵
+              </span>
+            </button>
+          ))}
+        </div>
+      )}
+
       {/* Input bar */}
-      <div className="flex items-end gap-2">
+      <div className="flex items-end gap-2 relative">
         {/* File upload button */}
         {allowMedia && (
           <button

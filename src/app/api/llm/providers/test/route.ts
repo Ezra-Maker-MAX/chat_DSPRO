@@ -106,7 +106,17 @@ function buildChatURL(provider: string, baseUrl?: string): string {
   return `${base}/chat/completions`;
 }
 
+// Providers that speak the OpenAI chat/completions shape. Anything else
+// (notably anthropic) uses a different request format.
+function isOpenAICompat(provider: string): boolean {
+  return provider !== "anthropic";
+}
+
 function buildPingBody(provider: string, model: string): unknown {
+  // Keep the body minimal and provider-safe. Non-OpenAI proxies (LiteLLM /
+  // Agnes-forwarded gateways) reject OpenAI-only fields such as
+  // response_format, logprobs, seed, n, stream_options — so we never send
+  // them here. max_tokens is supported by both OpenAI-compat and Anthropic.
   if (provider === "anthropic") {
     return {
       model,
@@ -114,6 +124,7 @@ function buildPingBody(provider: string, model: string): unknown {
       messages: [{ role: "user", content: "ping" }],
     };
   }
+  // OpenAI-compatible (openai / deepseek / google / custom / unknown)
   return {
     model,
     max_tokens: 4,

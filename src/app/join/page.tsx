@@ -1,12 +1,26 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import ParticleBackground from "@/components/layout/ParticleBackground";
 import { ArrowLeft, Sparkles, Loader2 } from "lucide-react";
 import Link from "next/link";
 
 export default function JoinPage() {
+  return (
+    <Suspense
+      fallback={
+        <main className="relative min-h-screen flex items-center justify-center">
+          <Loader2 size={24} className="animate-spin text-[var(--color-text-muted)]" />
+        </main>
+      }
+    >
+      <JoinForm />
+    </Suspense>
+  );
+}
+
+function JoinForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [inviteCode, setInviteCode] = useState("");

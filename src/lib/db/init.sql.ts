@@ -29,6 +29,20 @@ export const INIT_SQL = [
   )`,
   `CREATE UNIQUE INDEX IF NOT EXISTS user_tenant_nickname ON users(tenant_id, nickname)`,
 
+  `CREATE TABLE IF NOT EXISTS invite_codes (
+    id TEXT PRIMARY KEY NOT NULL,
+    tenant_id TEXT NOT NULL REFERENCES tenants(id),
+    code TEXT NOT NULL UNIQUE,
+    created_by TEXT REFERENCES users(id),
+    single_use INTEGER DEFAULT 0,
+    used_count INTEGER DEFAULT 0,
+    max_uses INTEGER,
+    expires_at TEXT,
+    is_active INTEGER DEFAULT 1,
+    created_at TEXT DEFAULT (datetime('now'))
+  )`,
+  `CREATE UNIQUE INDEX IF NOT EXISTS invite_tenant_code ON invite_codes(tenant_id, code)`,
+
   `CREATE TABLE IF NOT EXISTS channels (
     id TEXT PRIMARY KEY NOT NULL,
     tenant_id TEXT NOT NULL REFERENCES tenants(id),

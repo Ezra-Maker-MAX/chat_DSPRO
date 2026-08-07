@@ -29,11 +29,12 @@ export const INIT_SQL = [
     last_seen TEXT DEFAULT (datetime('now')),
     created_at TEXT DEFAULT (datetime('now'))
   )`,
-  `CREATE UNIQUE INDEX IF NOT EXISTS user_tenant_nickname ON users(tenant_id, nickname)`,
-  `CREATE UNIQUE INDEX IF NOT EXISTS user_tenant_username ON users(tenant_id, username)`,
-  // Add account columns to existing deployments (idempotent: SQLite ignores errors on missing column)
+  // Add account columns to existing deployments FIRST so indexes below can reference them.
+  // Idempotent: on fresh DBs the columns already exist, so these are skipped as "duplicate column name".
   `ALTER TABLE users ADD COLUMN username TEXT`,
   `ALTER TABLE users ADD COLUMN password_hash TEXT`,
+  `CREATE UNIQUE INDEX IF NOT EXISTS user_tenant_nickname ON users(tenant_id, nickname)`,
+  `CREATE UNIQUE INDEX IF NOT EXISTS user_tenant_username ON users(tenant_id, username)`,
 
   `CREATE TABLE IF NOT EXISTS invite_codes (
     id TEXT PRIMARY KEY NOT NULL,

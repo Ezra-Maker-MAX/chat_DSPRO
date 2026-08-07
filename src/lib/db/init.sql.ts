@@ -162,6 +162,7 @@ export const INIT_SQL = [
     created_by TEXT REFERENCES users(id),
     name TEXT NOT NULL,
     description TEXT DEFAULT '',
+    scan_depth INTEGER DEFAULT 6000,
     created_at TEXT DEFAULT (datetime('now'))
   )`,
 
@@ -169,11 +170,16 @@ export const INIT_SQL = [
     id TEXT PRIMARY KEY NOT NULL,
     world_book_id TEXT NOT NULL REFERENCES world_books(id),
     keys TEXT DEFAULT '[]',
+    secondary_keys TEXT DEFAULT '[]',
+    selective_logic TEXT DEFAULT NULL,
     content TEXT NOT NULL,
+    constant INTEGER DEFAULT 0,
+    case_sensitive INTEGER DEFAULT 0,
     insertion_order INTEGER DEFAULT 0,
     enabled INTEGER DEFAULT 1,
     priority INTEGER DEFAULT 10,
     position TEXT DEFAULT 'before_char',
+    token_budget INTEGER DEFAULT -1,
     created_at TEXT DEFAULT (datetime('now'))
   )`,
 

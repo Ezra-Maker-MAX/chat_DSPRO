@@ -198,18 +198,24 @@ export const worldBooks = sqliteTable("world_books", {
   createdBy: text("created_by").references(() => users.id),
   name: text("name").notNull(),
   description: text("description").default(""),
+  scanDepth: integer("scan_depth").default(6000), // chars to scan for keyword activation
   createdAt: text("created_at").default(sql`(datetime('now'))`),
 });
 
 export const worldBookEntries = sqliteTable("world_book_entries", {
   id: text("id").primaryKey(),
   worldBookId: text("world_book_id").notNull().references(() => worldBooks.id),
-  keys: text("keys").default("[]"), // JSON array of trigger keywords
+  keys: text("keys").default("[]"), // JSON array of primary trigger keywords
+  secondaryKeys: text("secondary_keys").default("[]"), // JSON array — AND / NOT logic
+  selectiveLogic: text("selective_logic").default(null), // "AND" | "NOT" | null (= OR)
   content: text("content").notNull(),
+  constant: integer("constant", { mode: "boolean" }).default(false), // always inject (蓝灯)
+  caseSensitive: integer("case_sensitive", { mode: "boolean" }).default(false),
   insertionOrder: integer("insertion_order").default(0),
   enabled: integer("enabled", { mode: "boolean" }).default(true),
   priority: integer("priority").default(10),
   position: text("position").default("before_char"), // "before_char" | "after_char"
+  tokenBudget: integer("token_budget").default(-1), // max tokens (-1 = no limit)
   createdAt: text("created_at").default(sql`(datetime('now'))`),
 });
 

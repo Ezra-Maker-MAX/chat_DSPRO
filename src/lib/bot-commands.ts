@@ -1,4 +1,4 @@
-import { streamText } from "ai";
+import { generateText } from "ai";
 import { getModelForTenant } from "@/lib/llm-gateway";
 import {
   ensureBotProfile,
@@ -167,7 +167,7 @@ async function chatWithContext(ctx: BotCommandContext, userText: string) {
     { role: "user" as const, content: `${ctx.nickname}: ${userText}` },
   ];
 
-  const { text } = await streamText({
+  const { text } = await generateText({
     model: routed.provider.model(routed.provider.modelId),
     system: systemPrompt,
     messages,

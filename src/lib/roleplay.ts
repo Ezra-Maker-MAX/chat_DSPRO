@@ -1,7 +1,7 @@
 import { db, schema } from "@/lib/db";
 import { eq, and, asc } from "drizzle-orm";
 import { generateId } from "@/lib/utils";
-import { streamText } from "ai";
+import { generateText } from "ai";
 import { getModelForTenant } from "@/lib/llm-gateway";
 
 // ============================================================
@@ -21,12 +21,17 @@ export interface CharacterCardInput {
 }
 
 export interface WorldBookEntryInput {
-  keys: string[]; // trigger keywords
+  keys: string[]; // primary trigger keywords
+  secondaryKeys?: string[]; // AND / NOT secondary keywords
+  selectiveLogic?: "AND" | "NOT" | null; // null = OR (any key matches)
   content: string;
+  constant?: boolean; // always inject regardless of keywords (蓝灯)
+  caseSensitive?: boolean;
   insertionOrder?: number;
   enabled?: boolean;
   priority?: number;
   position?: "before_char" | "after_char";
+  tokenBudget?: number; // max tokens (-1 = no limit)
 }
 
 /** Create or update a character card. */
@@ -153,18 +158,24 @@ export async function saveWorldBookEntry(
   input: WorldBookEntryInput,
   entryId?: string
 ) {
-  const keysJson = JSON.stringify(input.keys.slice(0, 50));
+  const keysJson = JSON.stringify((input.keys || []).slice(0, 50));
+  const secKeysJson = JSON.stringify((input.secondaryKeys || []).slice(0, 50));
 
   if (entryId) {
     await db
       .update(schema.worldBookEntries)
       .set({
         keys: keysJson,
+        secondaryKeys: secKeysJson,
+        selectiveLogic: input.selectiveLogic ?? null,
         content: input.content,
+        constant: input.constant ?? false,
+        caseSensitive: input.caseSensitive ?? false,
         insertionOrder: input.insertionOrder ?? 0,
         enabled: input.enabled ?? true,
         priority: input.priority ?? 10,
         position: input.position ?? "before_char",
+        tokenBudget: input.tokenBudget ?? -1,
       })
       .where(eq(schema.worldBookEntries.id, entryId));
     return entryId;
@@ -175,11 +186,16 @@ export async function saveWorldBookEntry(
     id,
     worldBookId,
     keys: keysJson,
+    secondaryKeys: secKeysJson,
+    selectiveLogic: input.selectiveLogic ?? null,
     content: input.content,
+    constant: input.constant ?? false,
+    caseSensitive: input.caseSensitive ?? false,
     insertionOrder: input.insertionOrder ?? 0,
     enabled: input.enabled ?? true,
     priority: input.priority ?? 10,
     position: input.position ?? "before_char",
+    tokenBudget: input.tokenBudget ?? -1,
   });
   return id;
 }
@@ -192,10 +208,34 @@ export async function deleteWorldBookEntry(entryId: string) {
  * Lorebook activation: given the recent conversation text, return entries whose
  * trigger keywords appear, ordered by priority then insertion order.
  */
+/**
+ * SillyTavern-style lorebook activation.
+ *
+ * Matching rules (per entry):
+ *  - constant=true → always activated, skip keyword check
+ *  - selectiveLogic=null (OR) → any primary key matches → activate
+ *  - selectiveLogic="AND" → at least one primary key AND all secondary keys must match
+ *  - selectiveLogic="NOT" → at least one primary key matches AND no secondary key matches
+ *  - caseSensitive=false (default) → case-insensitive comparison
+ *
+ * Returns entries sorted by priority (desc) then insertionOrder (asc).
+ * Each entry includes `trimmedContent` — content truncated to tokenBudget if set.
+ */
+export interface ActivatedEntry {
+  id: string;
+  content: string;
+  trimmedContent: string;
+  priority: number;
+  position: "before_char" | "after_char";
+  constant: boolean;
+}
+
 export async function activateLorebookEntries(
   worldBookId: string,
-  conversationText: string
-) {
+  conversationText: string,
+  characterName?: string,
+  userName?: string
+): Promise<ActivatedEntry[]> {
   const entries = await db
     .select()
     .from(schema.worldBookEntries)
@@ -206,23 +246,93 @@ export async function activateLorebookEntries(
       )
     );
 
-  const textLower = conversationText.toLowerCase();
-  return entries
-    .filter((e) => {
-      let keys: string[] = [];
-      try {
-        keys = JSON.parse(e.keys || "[]");
-      } catch {
-        keys = [];
-      }
-      return keys.some((k) => k && textLower.includes(k.toLowerCase()));
-    })
-    .sort((a, b) => {
-      const pa = a.priority ?? 10;
-      const pb = b.priority ?? 10;
-      if (pa !== pb) return pb - pa; // higher priority first
-      return (a.insertionOrder ?? 0) - (b.insertionOrder ?? 0);
+  // Apply macro replacements globally before matching
+  const resolvedText = conversationText
+    .replace(/\{\{char\}\}/gi, characterName || "")
+    .replace(/\{\{user\}\}/gi, userName || "")
+    .replace(/\{\{character\}\}/gi, characterName || "");
+
+  const activated: ActivatedEntry[] = [];
+
+  for (const e of entries) {
+    const isConstant = !!e.constant;
+
+    // Constant entries always activate
+    if (isConstant) {
+      activated.push(trimEntry(e));
+      continue;
+    }
+
+    // Parse keys
+    let keys: string[] = [];
+    try { keys = JSON.parse(e.keys || "[]"); } catch { keys = []; }
+    let secKeys: string[] = [];
+    try { secKeys = JSON.parse((e.secondaryKeys as string) || "[]"); } catch { secKeys = []; }
+
+    const logic = (e.selectiveLogic as string) || null; // "AND" | "NOT" | null
+    const caseSensitive = !!e.caseSensitive;
+    const scanText = caseSensitive ? resolvedText : resolvedText.toLowerCase();
+
+    // Check primary keys
+    const primaryMatch = keys.some((k) => {
+      if (!k) return false;
+      const kw = caseSensitive ? k : k.toLowerCase();
+      return scanText.includes(kw);
     });
+
+    if (!primaryMatch) continue;
+
+    // Apply selective logic for secondary keys
+    if (logic === "AND" && secKeys.length > 0) {
+      const allSecMatch = secKeys.every((k) => {
+        if (!k) return true;
+        const kw = caseSensitive ? k : k.toLowerCase();
+        return scanText.includes(kw);
+      });
+      if (!allSecMatch) continue;
+    }
+
+    if (logic === "NOT" && secKeys.length > 0) {
+      const anySecMatch = secKeys.some((k) => {
+        if (!k) return false;
+        const kw = caseSensitive ? k : k.toLowerCase();
+        return scanText.includes(kw);
+      });
+      if (anySecMatch) continue;
+    }
+
+    activated.push(trimEntry(e));
+  }
+
+  // Sort: higher priority first, then by insertion order
+  activated.sort((a, b) => {
+    if (b.priority !== a.priority) return b.priority - a.priority;
+    return 0; // keep original DB order for same priority
+  });
+
+  return activated;
+}
+
+/** Trim entry content to tokenBudget (rough char estimate: 1 token ≈ 4 chars for CJK, ≈ 3.5 for EN) */
+function trimEntry(e: typeof schema.worldBookEntries.$inferSelect): ActivatedEntry {
+  let content = e.content || "";
+  const budget = Number(e.tokenBudget ?? -1);
+  if (budget > 0) {
+    // Rough token→char conversion (conservative: 1 token ≈ 3 chars)
+    const maxChars = budget * 3;
+    if (content.length > maxChars) {
+      content = content.slice(0, maxChars) + "... [truncated]";
+    }
+  }
+  // Apply {{char}} / {{user}} macros in content too
+  return {
+    id: e.id,
+    content: e.content,
+    trimmedContent: content,
+    priority: e.priority ?? 10,
+    position: (e.position as "before_char" | "after_char") || "before_char",
+    constant: !!e.constant,
+  };
 }
 
 // ============================================================
@@ -315,30 +425,45 @@ export async function generateCharacterReply(params: {
     throw new Error("No LLM provider configured for roleplay. Add one in Settings → AI Providers.");
   }
 
-  // Recent conversation for lorebook activation
-  const recentText = [...history.map((m) => m.content), userTurn].join("\n").slice(0, 6000);
+  // Recent conversation for lorebook activation (respect scanDepth)
+  const scanDepth = (worldBook as any)?.scanDepth || 6000;
+  const recentText = [...history.map((m) => m.content), userTurn].join("\n").slice(0, scanDepth);
 
-  let loreBlock = "";
+  // Activate lorebook entries (SillyTavern-style: constant / AND / NOT / position / budget)
+  const beforeCharEntries: ActivatedEntry[] = [];
+  const afterCharEntries: ActivatedEntry[] = [];
   if (worldBook) {
-    const active = await activateLorebookEntries(worldBook.id, recentText);
-    if (active.length > 0) {
-      loreBlock =
-        "\n\n[World Lore — only use what is relevant, treat as canonical facts]\n" +
-        active
-          .map((e) => `• ${e.content}`)
-          .join("\n");
+    const active = await activateLorebookEntries(worldBook.id, recentText, card.name);
+    for (const e of active) {
+      if (e.position === "after_char") {
+        afterCharEntries.push(e);
+      } else {
+        beforeCharEntries.push(e);
+      }
     }
   }
+
+  const formatEntries = (entries: ActivatedEntry[]) =>
+    entries.length > 0
+      ? "\n" + entries.map((e) => (e.constant ? "🔵 " : "🟢 ") + e.trimmedContent).join("\n")
+      : "";
 
   const characterName = card.name;
   const systemPrompt = [
     card.systemPrompt || `You are ${characterName}. Stay in character at all times.`,
+    // Lorebook BEFORE character definitions
+    beforeCharEntries.length > 0
+      ? `\n[World Lore — canonical facts. 🔵=always on, 🟢=triggered]${formatEntries(beforeCharEntries)}`
+      : "",
     card.description ? `\n[Character description]\n${card.description}` : "",
     card.personality ? `\n[Personality]\n${card.personality}` : "",
     card.scenario ? `\n[Scenario]\n${card.scenario}` : "",
-    loreBlock,
     card.mesExample
       ? `\n[Example dialogue — follow this style and tone]\n${card.mesExample}`
+      : "",
+    // Lorebook AFTER character definitions (post-char context)
+    afterCharEntries.length > 0
+      ? `\n[Additional Context — reference these facts in your reply]${formatEntries(afterCharEntries)}`
       : "",
     card.postHistoryInstructions
       ? `\n[After each reply]\n${card.postHistoryInstructions}`
@@ -353,7 +478,7 @@ export async function generateCharacterReply(params: {
     { role: "user", content: userTurn },
   ];
 
-  const { text } = await streamText({
+  const { text } = await generateText({
     model: routed.provider.model(routed.provider.modelId),
     system: systemPrompt,
     messages,

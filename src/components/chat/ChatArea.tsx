@@ -159,6 +159,9 @@ export default function ChatArea({
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ channelId, content }),
+        }).then(async (r) => {
+          const d = await r.json().catch(() => ({}));
+          if (d.error) console.warn("[bot-command] error:", d.error);
         }).catch(() => {});
         return;
       }

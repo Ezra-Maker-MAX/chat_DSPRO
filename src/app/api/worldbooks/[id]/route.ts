@@ -55,6 +55,7 @@ export async function POST(req: NextRequest, { params }: Params) {
 
   const body = await req.json();
   const keys = Array.isArray(body.keys) ? body.keys.map((k: string) => String(k).slice(0, 60)) : [];
+  const secKeys = Array.isArray(body.secondaryKeys) ? body.secondaryKeys.map((k: string) => String(k).slice(0, 60)) : [];
   const content = body.content?.trim();
   if (!content) {
     return NextResponse.json({ error: "Entry content is required" }, { status: 400 });
@@ -62,12 +63,17 @@ export async function POST(req: NextRequest, { params }: Params) {
 
   const entryId = await saveWorldBookEntry(id, {
     keys,
+    secondaryKeys: secKeys,
+    selectiveLogic: ["AND", "NOT"].includes(body.selectiveLogic) ? body.selectiveLogic : null,
     content: content.slice(0, 4000),
+    constant: !!body.constant,
+    caseSensitive: !!body.caseSensitive,
     insertionOrder: body.insertionOrder,
     enabled: body.enabled ?? true,
     priority: body.priority,
     position: body.position === "after_char" ? "after_char" : "before_char",
-  });
+    tokenBudget: typeof body.tokenBudget === "number" ? body.tokenBudget : -1,
+  }, body.entryId || undefined);
 
   return NextResponse.json({ success: true, id: entryId });
 }

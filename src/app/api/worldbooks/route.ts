@@ -76,3 +76,42 @@ export async function DELETE(req: NextRequest) {
 
   return NextResponse.json({ success: true });
 }
+
+/** PATCH /api/worldbooks?id=... — update book metadata (scanDepth, name, description). */
+export async function PATCH(req: NextRequest) {
+  const session = await getSession();
+  if (!session) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+  const { searchParams } = new URL(req.url);
+  const id = searchParams.get("id");
+  if (!id) {
+    return NextResponse.json({ error: "id required" }, { status: 400 });
+  }
+
+  const [wb] = await db
+    .select()
+    .from(schema.worldBooks)
+    .where(
+      and(
+        eq(schema.worldBooks.id, id),
+        eq(schema.worldBooks.tenantId, session.tenantId)
+      )
+    )
+    .limit(1);
+  if (!wb) {
+    return NextResponse.json({ error: "World book not found" }, { status: 404 });
+  }
+
+  const body = await req.json();
+  const updates: Record<string, unknown> = {};
+  if (typeof body.name === "string" && body.name.trim()) updates.name = body.name.trim().slice(0, 60);
+  if (typeof body.description === "string") updates.description = body.description.slice(0, 200);
+  if (typeof body.scanDepth === "number" && body.scanDepth >= 100 && body.scanDepth <= 50000) {
+    updates.scanDepth = Math.round(body.scanDepth);
+  }
+  if (Object.keys(updates).length > 0) {
+    await db.update(schema.worldBooks).set(updates).where(eq(schema.worldBooks.id, id));
+  }
+  return NextResponse.json({ success: true });
+}

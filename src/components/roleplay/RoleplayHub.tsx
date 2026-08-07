@@ -128,7 +128,7 @@ export default function RoleplayHub() {
         body: JSON.stringify({ characterId: activeCard.id, message: text }),
       });
       const data = await res.json();
-      if (data.reply) {
+      if (typeof data.reply === "string" && data.reply) {
         setChat((prev) => [...prev, { role: "assistant", content: data.reply }]);
       } else if (data.error) {
         setChat((prev) => [...prev, { role: "assistant", content: `⚠️ ${data.error}` }]);

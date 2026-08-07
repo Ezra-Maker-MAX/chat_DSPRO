@@ -1,24 +1,46 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useI18n } from "@/lib/i18n";
-import { BookOpen, Plus, Trash2, Loader2, KeyRound, X, Save } from "lucide-react";
+import {
+  BookOpen, Plus, Trash2, Loader2, KeyRound, X, Save,
+  Edit3, ToggleLeft, ToggleRight, Zap, Eye, EyeOff,
+  ChevronDown, ChevronUp, Copy, Check,
+} from "lucide-react";
 
 interface WorldBook {
   id: string;
   name: string;
   description: string;
+  scanDepth?: number;
 }
 
 interface Entry {
   id: string;
   keys: string;
+  secondaryKeys?: string;
+  selectiveLogic?: string | null;
   content: string;
+  constant: boolean;
+  caseSensitive: boolean;
   insertionOrder: number;
   enabled: boolean;
   priority: number;
   position: string;
+  tokenBudget: number;
 }
+
+const EMPTY_ENTRY = {
+  keys: "",
+  secondaryKeys: "",
+  selectiveLogic: null as string | null,
+  content: "",
+  constant: false,
+  caseSensitive: false,
+  priority: 10,
+  position: "before_char",
+  tokenBudget: -1,
+};
 
 export default function WorldBooksManager() {
   const { t } = useI18n();
@@ -35,11 +57,16 @@ export default function WorldBooksManager() {
   const [newBookDesc, setNewBookDesc] = useState("");
   const [creating, setCreating] = useState(false);
 
-  // New entry form
-  const [entryKeys, setEntryKeys] = useState("");
-  const [entryContent, setEntryContent] = useState("");
-  const [entryPriority, setEntryPriority] = useState(10);
-  const [entryPosition, setEntryPosition] = useState("before_char");
+  // Entry form (create or edit)
+  const [entryForm, setEntryForm] = useState({ ...EMPTY_ENTRY });
+  const [editingEntryId, setEditingEntryId] = useState<string | null>(null);
+  const [saving, setSaving] = useState(false);
+  const [expandedEntryId, setExpandedEntryId] = useState<string | null>(null);
+  const [showAdvanced, setShowAdvanced] = useState(false);
+  const [copiedId, setCopiedId] = useState<string | null>(null);
+
+  // Per-book scan depth
+  const [bookScanDepth, setBookScanDepth] = useState(6000);
 
   const fetchBooks = async () => {
     try {
@@ -65,6 +92,7 @@ export default function WorldBooksManager() {
       const res = await fetch(`/api/worldbooks/${id}`);
       const data = await res.json();
       setEntries(data.entries || []);
+      setBookScanDepth(data.scanDepth || 6000);
     } catch {
       setError(t("wb.error.load"));
     } finally {
@@ -108,38 +136,122 @@ export default function WorldBooksManager() {
     }
   };
 
-  const addEntry = async () => {
-    if (!activeBookId || !entryContent.trim()) return;
+  const resetForm = () => {
+    setEntryForm({ ...EMPTY_ENTRY });
+    setEditingEntryId(null);
+    setShowAdvanced(false);
+  };
+
+  const saveEntry = async () => {
+    if (!activeBookId || !entryForm.content.trim()) return;
+    setSaving(true);
     try {
-      const keys = entryKeys
+      const keys = entryForm.keys
         .split(",")
         .map((k) => k.trim())
         .filter(Boolean);
-      const res = await fetch(`/api/worldbooks/${activeBookId}`, {
+      const secKeys = entryForm.secondaryKeys
+        .split(",")
+        .map((k) => k.trim())
+        .filter(Boolean);
+
+      const body: Record<string, unknown> = {
+        keys,
+        content: entryForm.content.trim(),
+        priority: entryForm.priority,
+        position: entryForm.position,
+        constant: entryForm.constant,
+        caseSensitive: entryForm.caseSensitive,
+        tokenBudget: entryForm.tokenBudget,
+      };
+      if (secKeys.length > 0) body.secondaryKeys = secKeys;
+      if (entryForm.selectiveLogic) body.selectiveLogic = entryForm.selectiveLogic;
+
+      const url = editingEntryId
+        ? `/api/worldbooks/${activeBookId}`
+        : `/api/worldbooks/${activeBookId}`;
+
+      // For edit, we pass entryId in the body; the backend's saveWorldBookEntry handles it
+      if (editingEntryId) body.entryId = editingEntryId;
+
+      const res = await fetch(url, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ keys, content: entryContent.trim(), priority: entryPriority, position: entryPosition }),
+        body: JSON.stringify(body),
       });
       const data = await res.json();
       if (data.success) {
-        setEntryKeys("");
-        setEntryContent("");
-        setEntryPriority(10);
+        resetForm();
         await openBook(activeBookId);
       }
     } catch {
       setError(t("wb.error.add"));
+    } finally {
+      setSaving(false);
     }
+  };
+
+  const startEdit = (e: Entry) => {
+    let keysArr: string[] = [];
+    try { keysArr = JSON.parse(e.keys || "[]"); } catch {}
+    let secArr: string[] = [];
+    try { secArr = JSON.parse((e.secondaryKeys as string) || "[]"); } catch {}
+
+    setEntryForm({
+      keys: keysArr.join(", "),
+      secondaryKeys: secArr.join(", "),
+      selectiveLogic: e.selectiveLogic || null,
+      content: e.content,
+      constant: e.constant,
+      caseSensitive: e.caseSensitive,
+      priority: e.priority,
+      position: e.position || "before_char",
+      tokenBudget: e.tokenBudget ?? -1,
+    });
+    setEditingEntryId(e.id);
+    setExpandedEntryId(e.id);
+    setShowAdvanced(true);
   };
 
   const removeEntry = async (entryId: string) => {
     if (!activeBookId) return;
     try {
       await fetch(`/api/worldbooks/${activeBookId}?entryId=${entryId}`, { method: "DELETE" });
+      if (editingEntryId === entryId) resetForm();
+      if (expandedEntryId === entryId) setExpandedEntryId(null);
       await openBook(activeBookId);
     } catch {
       setError(t("wb.error.deleteEntry"));
     }
+  };
+
+  const copyContent = useCallback(async (id: string, text: string) => {
+    try {
+      await navigator.clipboard.writeText(text);
+      setCopiedId(id);
+      setTimeout(() => setCopiedId(null), 1500);
+    } catch {}
+  }, []);
+
+  // ── Render helpers ──
+
+  const parseKeys = (raw: string): string[] => {
+    try { return JSON.parse(raw || "[]"); } catch { return []; }
+  };
+
+  const EntryBadge = ({ children, color = "default" }: { children: React.ReactNode; color?: string }) => {
+    const colors: Record<string, string> = {
+      default: "bg-[var(--color-teal-muted)] text-[var(--color-teal)]",
+      constant: "bg-blue-500/15 text-blue-400",
+      secondary: "bg-amber-500/15 text-amber-400",
+      and: "bg-emerald-500/15 text-emerald-400",
+      not: "bg-red-500/15 text-red-400",
+    };
+    return (
+      <span className={`text-[9px] px-1.5 py-0.5 rounded font-mono ${colors[color] || colors.default}`}>
+        {children}
+      </span>
+    );
   };
 
   if (loading) {
@@ -158,7 +270,7 @@ export default function WorldBooksManager() {
         </div>
       )}
 
-      {/* New book form */}
+      {/* ═══════ Create World Book ═══════ */}
       <div className="glass-card p-4 space-y-3">
         <div className="flex items-center gap-2">
           <BookOpen size={16} className="text-[var(--color-accent-glow)]" />
@@ -188,7 +300,7 @@ export default function WorldBooksManager() {
         </div>
       </div>
 
-      {/* Book list */}
+      {/* ═══════ Book List ═══════ */}
       {books.length === 0 ? (
         <div className="glass-card p-6 text-center">
           <BookOpen size={20} className="mx-auto mb-2 text-[var(--color-text-muted)]" />
@@ -198,132 +310,402 @@ export default function WorldBooksManager() {
         </div>
       ) : (
         <div className="space-y-2">
-          {books.map((book) => (
-            <div key={book.id} className="glass-card overflow-hidden">
-              <button
-                onClick={() => openBook(book.id)}
-                className="w-full flex items-center gap-3 p-3.5 text-left hover:bg-[var(--color-bg-hover)] transition-colors"
-              >
-                <div className="w-8 h-8 rounded-lg bg-[var(--color-accent-muted)] flex items-center justify-center shrink-0">
-                  <BookOpen size={14} className="text-[var(--color-accent-glow)]" />
-                </div>
-                <div className="flex-1 min-w-0">
-                  <span className="block text-sm font-medium truncate">{book.name}</span>
-                  {book.description && (
-                    <span className="block text-[11px] text-[var(--color-text-muted)] truncate">
-                      {book.description}
+          {books.map((book) => {
+            const isActive = activeBookId === book.id;
+            return (
+              <div key={book.id} className="glass-card overflow-hidden">
+                {/* Book header row */}
+                <button
+                  onClick={() => isActive ? setActiveBookId(null) : openBook(book.id)}
+                  className="w-full flex items-center gap-3 p-3.5 text-left hover:bg-[var(--color-bg-hover)] transition-colors"
+                >
+                  <div className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0 transition-colors ${isActive ? "bg-[var(--color-accent)]" : "bg-[var(--color-accent-muted)]"}`}>
+                    <BookOpen size={14} className={isActive ? "text-white" : "text-[var(--color-accent-glow)]"} />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <span className="block text-sm font-medium truncate">{book.name}</span>
+                    {book.description && (
+                      <span className="block text-[11px] text-[var(--color-text-muted)] truncate">{book.description}</span>
+                    )}
+                  </div>
+                  {/* Entry count badge */}
+                  {isActive && entries.length > 0 && (
+                    <span className="text-[10px] px-2 py-0.5 rounded-full bg-[var(--color-teal-muted)] text-[var(--color-teal)] font-medium">
+                      {entries.filter(e => e.enabled).length}/{entries.length} {t("wb.entries")}
                     </span>
                   )}
-                </div>
-                <button
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    deleteBook(book.id);
-                  }}
-                  className="p-1.5 rounded-lg text-[var(--color-text-muted)] hover:text-[var(--color-danger)] hover:bg-[var(--color-bg-hover)] transition-colors"
-                >
-                  <Trash2 size={13} />
+                  <button
+                    onClick={(e) => { e.stopPropagation(); deleteBook(book.id); }}
+                    className="p-1.5 rounded-lg text-[var(--color-text-muted)] hover:text-[var(--color-danger)] hover:bg-[var(--color-bg-hover)] transition-colors"
+                  >
+                    <Trash2 size={13} />
+                  </button>
                 </button>
-              </button>
 
-              {/* Entries for active book */}
-              {activeBookId === book.id && (
-                <div className="border-t border-[var(--color-border)] p-4 bg-[var(--color-bg-base)]/50">
-                  {bookLoading ? (
-                    <div className="flex justify-center py-4">
-                      <Loader2 size={14} className="animate-spin text-[var(--color-text-muted)]" />
-                    </div>
-                  ) : (
-                    <>
-                      {/* Entry list */}
-                      <div className="space-y-2 mb-3">
-                        {entries.length === 0 && (
-                          <p className="text-[11px] text-[var(--color-text-muted)] py-2">
-                            {t("wb.noEntries")}
-                          </p>
-                        )}
-                        {entries.map((e) => {
-                          let keys: string[] = [];
-                          try {
-                            keys = JSON.parse(e.keys || "[]");
-                          } catch {}
-                          return (
-                            <div key={e.id} className="flex items-start gap-2 p-2.5 rounded-lg bg-[var(--color-bg-input)] border border-[var(--color-border)]">
-                              <div className="flex-1 min-w-0">
-                                <div className="flex items-center gap-2 flex-wrap mb-1">
-                                  {keys.slice(0, 4).map((k, i) => (
-                                    <span key={i} className="text-[9px] px-1.5 py-0.5 rounded bg-[var(--color-teal-muted)] text-[var(--color-teal)] font-mono">
-                                      {k}
-                                    </span>
-                                  ))}
-                                  <span className="text-[9px] text-[var(--color-text-muted)]">
-                                    {t("wb.priority", { p: e.priority })} · {e.position}
-                                  </span>
-                                </div>
-                                <p className="text-[11px] text-[var(--color-text-secondary)] line-clamp-2">
-                                  {e.content}
-                                </p>
-                              </div>
-                              <button
-                                onClick={() => removeEntry(e.id)}
-                                className="p-1 rounded text-[var(--color-text-muted)] hover:text-[var(--color-danger)] shrink-0"
+                {/* ═══ Entries panel ═══ */}
+                {isActive && (
+                  <div className="border-t border-[var(--color-border)] bg-[var(--color-bg-base)]/50">
+                    {bookLoading ? (
+                      <div className="flex justify-center py-4">
+                        <Loader2 size={14} className="animate-spin text-[var(--color-text-muted)]" />
+                      </div>
+                    ) : (
+                      <>
+                        {/* Scan depth setting */}
+                        <div className="flex items-center gap-3 px-4 pt-3 pb-1">
+                          <label className="text-[10px] text-[var(--color-text-muted)] whitespace-nowrap">
+                            {t("wb.scanDepth", { n: bookScanDepth })}
+                          </label>
+                          <input
+                            type="range"
+                            min={500}
+                            max={20000}
+                            step={500}
+                            value={bookScanDepth}
+                            onChange={(e) => setBookScanDepth(Number(e.target.value))}
+                            className="flex-1 h-1 accent-[var(--color-accent)]"
+                          />
+                        </div>
+
+                        {/* Entry list */}
+                        <div className="space-y-1.5 px-4 pb-2 max-h-[360px] overflow-y-auto">
+                          {entries.length === 0 && (
+                            <p className="text-[11px] text-[var(--color-text-muted)] py-3 text-center">
+                              {t("wb.noEntries")}
+                            </p>
+                          )}
+                          {entries.map((e) => {
+                            const keys = parseKeys(e.keys);
+                            const secKeys = parseKeys((e.secondaryKeys as string) || "");
+                            const isExpanded = expandedEntryId === e.id;
+                            const isEditing = editingEntryId === e.id;
+
+                            return (
+                              <div
+                                key={e.id}
+                                className={`rounded-lg border transition-all ${
+                                  e.enabled
+                                    ? "bg-[var(--color-bg-input)] border-[var(--color-border)]"
+                                    : "bg-[var(--color-bg-input)]/40 border-[var(--color-border)]/50 opacity-50"
+                                } ${isExpanded ? "ring-1 ring-[var(--color-accent)]/30" : ""}`}
                               >
-                                <X size={12} />
+                                {/* Entry summary bar */}
+                                <div
+                                  className="flex items-start gap-2 p-2.5 cursor-pointer"
+                                  onClick={() => setExpandedEntryId(isExpanded ? null : e.id)}
+                                >
+                                  {/* Status icon */}
+                                  <div className="mt-0.5 shrink-0">
+                                    {e.constant ? (
+                                      <Zap size={12} className="text-blue-400" />
+                                    ) : e.enabled ? (
+                                      <KeyRound size={12} className="text-[var(--color-teal)]" />
+                                    ) : (
+                                      <EyeOff size={11} className="text-[var(--color-text-muted)]" />
+                                    )}
+                                  </div>
+
+                                  {/* Content preview + badges */}
+                                  <div className="flex-1 min-w-0">
+                                    <div className="flex items-center gap-1.5 flex-wrap mb-1">
+                                      {e.constant && <EntryBadge color="constant">CONST</EntryBadge>}
+                                      {keys.slice(0, 3).map((k, i) => (
+                                        <EntryBadge key={i}>{k}</EntryBadge>
+                                      ))}
+                                      {keys.length > 3 && (
+                                        <EntryBadge>+{keys.length - 3}</EntryBadge>
+                                      )}
+                                      {secKeys.length > 0 && (
+                                        <EntryBadge color="secondary">AND:{secKeys[0]}</EntryBadge>
+                                      )}
+                                      {e.selectiveLogic === "AND" && <EntryBadge color="and">AND</EntryBadge>}
+                                      {e.selectiveLogic === "NOT" && <EntryBadge color="not">NOT</EntryBadge>}
+                                      {!e.caseSensitive && <EntryBadge>ci</EntryBadge>}
+                                    </div>
+                                    <p className={`text-[11px] text-[var(--color-text-secondary)] ${isExpanded ? "" : "line-clamp-1"}`}>
+                                      {e.content || "(empty)"}
+                                    </p>
+                                  </div>
+
+                                  {/* Action buttons */}
+                                  <div className="flex items-center gap-0.5 shrink-0" onClick={(ev) => ev.stopPropagation()}>
+                                    <button
+                                      onClick={() => copyContent(e.id, e.content)}
+                                      className="p-1 rounded text-[var(--color-text-muted)] hover:text-[var(--color-text-secondary)] hover:bg-[var(--color-bg-hover)]"
+                                      title={t("wb.copy") || "Copy"}
+                                    >
+                                      {copiedId === e.id ? <Check size={11} className="text-green-400" /> : <Copy size={11} />}
+                                    </button>
+                                    <button
+                                      onClick={() => startEdit(e)}
+                                      className="p-1 rounded text-[var(--color-text-muted)] hover:text-[var(--color-accent-glow)] hover:bg-[var(--color-bg-hover)]"
+                                      title={t("wb.edit") || "Edit"}
+                                    >
+                                      <Edit3 size={11} />
+                                    </button>
+                                    <button
+                                      onClick={() => removeEntry(e.id)}
+                                      className="p-1 rounded text-[var(--color-text-muted)] hover:text-[var(--color-danger)] hover:bg-[var(--color-bg-hover)]"
+                                    >
+                                      <X size={12} />
+                                    </button>
+                                  </div>
+                                </div>
+
+                                {/* Expanded editor (when editing this entry) */}
+                                {isExpanded && isEditing && (
+                                  <div className="border-t border-[var(--color-border)] p-3 space-y-2 bg-[var(--color-bg-deep)]/30">
+                                    {/* Primary keys */}
+                                    <div>
+                                      <label className="block text-[10px] text-[var(--color-text-muted)] mb-1">
+                                        <KeyRound size={10} className="inline mr-1" />
+                                        {t("wb.keys.ph")}
+                                      </label>
+                                      <input
+                                        value={entryForm.keys}
+                                        onChange={(e) => setEntryForm(f => ({ ...f, keys: e.target.value }))}
+                                        placeholder="magic, spell, 魔法 (comma separated)"
+                                        className="w-full bg-[var(--color-bg-input)] border border-[var(--color-border)] rounded-lg px-3 py-1.5 text-xs font-mono focus:outline-none focus:border-[var(--color-accent)]"
+                                      />
+                                    </div>
+
+                                    {/* Content */}
+                                    <textarea
+                                      value={entryForm.content}
+                                      onChange={(e) => setEntryForm(f => ({ ...f, content: e.target.value }))}
+                                      placeholder={t("wb.content.ph")}
+                                      rows={3}
+                                      className="w-full bg-[var(--color-bg-input)] border border-[var(--color-border)] rounded-lg px-3 py-2 text-xs resize-none focus:outline-none focus:border-[var(--color-accent)]"
+                                    />
+
+                                    {/* Basic options row */}
+                                    <div className="flex items-center gap-2 flex-wrap">
+                                      <input
+                                        type="number"
+                                        min={1}
+                                        max={100}
+                                        value={entryForm.priority}
+                                        onChange={(e) => setEntryForm(f => ({ ...f, priority: Number(e.target.value) }))}
+                                        className="w-16 bg-[var(--color-bg-input)] border border-[var(--color-border)] rounded-lg px-2 py-1.5 text-xs focus:outline-none"
+                                        title={t("wb.priorityPh") || "Priority (higher = first)"}
+                                      />
+                                      <select
+                                        value={entryForm.position}
+                                        onChange={(e) => setEntryForm(f => ({ ...f, position: e.target.value }))}
+                                        className="bg-[var(--color-bg-input)] border border-[var(--color-border)] rounded-lg px-2 py-1.5 text-xs focus:outline-none"
+                                      >
+                                        <option value="before_char">{t("wb.before")}</option>
+                                        <option value="after_char">{t("wb.after")}</option>
+                                      </select>
+
+                                      {/* Constant toggle */}
+                                      <button
+                                        onClick={() => setEntryForm(f => ({ ...f, constant: !f.constant }))}
+                                        className={`flex items-center gap-1 px-2 py-1 rounded-md text-[10px] font-medium transition-colors ${
+                                          entryForm.constant
+                                            ? "bg-blue-500/15 text-blue-400"
+                                            : "bg-[var(--color-bg-hover)] text-[var(--color-text-muted)]"
+                                        }`}
+                                        title={t("wb.constantPh") || "Always inject (blue light)"}
+                                      >
+                                        {entryForm.constant ? <ToggleRight size={14} /> : <ToggleLeft size={14} />}
+                                        CONST
+                                      </button>
+
+                                      {/* Case sensitivity toggle */}
+                                      <button
+                                        onClick={() => setEntryForm(f => ({ ...f, caseSensitive: !f.caseSensitive }))}
+                                        className={`flex items-center gap-1 px-2 py-1 rounded-md text-[10px] font-medium transition-colors ${
+                                          entryForm.caseSensitive
+                                            ? "bg-amber-500/15 text-amber-400"
+                                            : "bg-[var(--color-bg-hover)] text-[var(--color-text-muted)]"
+                                        }`}
+                                        title={t("wb.casePh") || "Case sensitive match"}
+                                      >
+                                        {entryForm.caseSensitive ? <Eye size={12} /> : <EyeOff size={12} />}
+                                        Aa
+                                      </button>
+
+                                      {/* Advanced toggle */}
+                                      <button
+                                        onClick={() => setShowAdvanced(s => !s)}
+                                        className="ml-auto flex items-center gap-1 px-2 py-1 rounded-md text-[10px] text-[var(--color-text-muted)] hover:text-[var(--color-text-secondary)] hover:bg-[var(--color-bg-hover)]"
+                                      >
+                                        {showAdvanced ? <ChevronUp size={11} /> : <ChevronDown size={11} />}
+                                        {t("wb.advanced") || "Advanced"}
+                                      </button>
+                                    </div>
+
+                                    {/* Advanced options */}
+                                    {showAdvanced && (
+                                      <div className="space-y-2 pl-2 border-l-2 border-[var(--color-border)]">
+                                        {/* Secondary keys */}
+                                        <div>
+                                          <label className="block text-[10px] text-[var(--color-text-muted)] mb-1">
+                                            {t("wb.secKeysPh") || "Secondary keys (for AND / NOT logic)"}
+                                          </label>
+                                          <input
+                                            value={entryForm.secondaryKeys}
+                                            onChange={(e) => setEntryForm(f => ({ ...f, secondaryKeys: e.target.value }))}
+                                            placeholder="dragon, enemy (must also appear)"
+                                            className="w-full bg-[var(--color-bg-input)] border border-[var(--color-border)] rounded-lg px-3 py-1.5 text-xs font-mono focus:outline-none focus:border-[var(--color-accent)]"
+                                          />
+                                        </div>
+
+                                        {/* Selective logic */}
+                                        <div className="flex items-center gap-2">
+                                          <label className="text-[10px] text-[var(--color-text-muted)]">
+                                            {t("wb.logicPh") || "Selective logic:"}
+                                          </label>
+                                          <select
+                                            value={entryForm.selectiveLogic || ""}
+                                            onChange={(e) => setEntryForm(f => ({
+                                              ...f,
+                                              selectiveLogic: e.target.value || null,
+                                            }))}
+                                            className="bg-[var(--color-bg-input)] border border-[var(--color-border)] rounded-lg px-2 py-1.5 text-xs focus:outline-none"
+                                          >
+                                            <option value="">OR (any key)</option>
+                                            <option value="AND">AND (all sec. keys)</option>
+                                            <option value="NOT">NOT (no sec. key)</option>
+                                          </select>
+                                        </div>
+
+                                        {/* Token budget */}
+                                        <div className="flex items-center gap-2">
+                                          <label className="text-[10px] text-[var(--color-text-muted)]">
+                                            {t("wb.budgetPh") || "Token budget (-1=unlimited):"}
+                                          </label>
+                                          <input
+                                            type="number"
+                                            min={-1}
+                                            max={8000}
+                                            value={entryForm.tokenBudget}
+                                            onChange={(e) => setEntryForm(f => ({ ...f, tokenBudget: Number(e.target.value) }))}
+                                            className="w-20 bg-[var(--color-bg-input)] border border-[var(--color-border)] rounded-lg px-2 py-1.5 text-xs focus:outline-none"
+                                          />
+                                        </div>
+                                      </div>
+                                    )}
+
+                                    {/* Save / Cancel */}
+                                    <div className="flex justify-end gap-2 pt-1">
+                                      <button
+                                        onClick={resetForm}
+                                        className="px-3 py-1.5 rounded-lg text-[11px] text-[var(--color-text-muted)] hover:text-[var(--color-text-secondary)] hover:bg-[var(--color-bg-hover)] transition-colors"
+                                      >
+                                        {t("wb.cancel") || "Cancel"}
+                                      </button>
+                                      <button
+                                        onClick={saveEntry}
+                                        disabled={saving || !entryForm.content.trim()}
+                                        className="flex items-center gap-1 px-3 py-1.5 rounded-lg bg-[var(--color-teal-muted)] text-[var(--color-teal)] text-[11px] font-medium hover:bg-[var(--color-teal)] hover:text-[var(--color-bg-deep)] transition-colors disabled:opacity-40"
+                                      >
+                                        {saving ? <Loader2 size={10} className="animate-spin" /> : <Save size={10} />}
+                                        {editingEntryId ? (t("wb.updateBtn") || "Update") : t("wb.addEntry")}
+                                      </button>
+                                    </div>
+                                  </div>
+                                )}
+                              </div>
+                            );
+                          })}
+                        </div>
+
+                        {/* Add new entry form (when not editing) */}
+                        {editingEntryId === null && (
+                          <div className="border-t border-[var(--color-border)] p-3 space-y-2 bg-[var(--color-bg-deep)]/20">
+                            <div className="flex items-center gap-2 text-[10px] text-[var(--color-text-muted)]">
+                              <Plus size={11} />
+                              {t("wb.newEntry") || "Add new entry"}
+                            </div>
+                            <input
+                              value={entryForm.keys}
+                              onChange={(e) => setEntryForm(f => ({ ...f, keys: e.target.value }))}
+                              placeholder={t("wb.keys.ph")}
+                              className="w-full bg-[var(--color-bg-input)] border border-[var(--color-border)] rounded-lg px-3 py-2 text-xs font-mono focus:outline-none focus:border-[var(--color-accent)]"
+                            />
+                            <textarea
+                              value={entryForm.content}
+                              onChange={(e) => setEntryForm(f => ({ ...f, content: e.target.value }))}
+                              placeholder={t("wb.content.ph")}
+                              rows={2}
+                              className="w-full bg-[var(--color-bg-input)] border border-[var(--color-border)] rounded-lg px-3 py-2 text-xs resize-none focus:outline-none focus:border-[var(--color-accent)]"
+                            />
+                            <div className="flex items-center gap-2">
+                              <input
+                                type="number"
+                                min={1}
+                                max={100}
+                                value={entryForm.priority}
+                                onChange={(e) => setEntryForm(f => ({ ...f, priority: Number(e.target.value) }))}
+                                className="w-16 bg-[var(--color-bg-input)] border border-[var(--color-border)] rounded-lg px-2 py-1.5 text-xs focus:outline-none"
+                              />
+                              <select
+                                value={entryForm.position}
+                                onChange={(e) => setEntryForm(f => ({ ...f, position: e.target.value }))}
+                                className="bg-[var(--color-bg-input)] border border-[var(--color-border)] rounded-lg px-2 py-1.5 text-xs focus:outline-none"
+                              >
+                                <option value="before_char">{t("wb.before")}</option>
+                                <option value="after_char">{t("wb.after")}</option>
+                              </select>
+                              <button
+                                onClick={() => setShowAdvanced(s => !s)}
+                                className="ml-auto text-[10px] text-[var(--color-text-muted)] hover:text-[var(--color-text-secondary)] flex items-center gap-1"
+                              >
+                                {showAdvanced ? <ChevronUp size={10} /> : <ChevronDown size={10} />}
+                                {t("wb.advanced") || "Advanced"}
                               </button>
                             </div>
-                          );
-                        })}
-                      </div>
-
-                      {/* Add entry form */}
-                      <div className="space-y-2">
-                        <input
-                          value={entryKeys}
-                          onChange={(e) => setEntryKeys(e.target.value)}
-                          placeholder={t("wb.keys.ph")}
-                          className="w-full bg-[var(--color-bg-input)] border border-[var(--color-border)] rounded-lg px-3 py-2 text-xs font-mono focus:outline-none focus:border-[var(--color-accent)]"
-                        />
-                        <textarea
-                          value={entryContent}
-                          onChange={(e) => setEntryContent(e.target.value)}
-                          placeholder={t("wb.content.ph")}
-                          rows={2}
-                          className="w-full bg-[var(--color-bg-input)] border border-[var(--color-border)] rounded-lg px-3 py-2 text-xs resize-none focus:outline-none focus:border-[var(--color-accent)]"
-                        />
-                        <div className="flex items-center gap-2">
-                          <input
-                            type="number"
-                            min={1}
-                            max={100}
-                            value={entryPriority}
-                            onChange={(e) => setEntryPriority(Number(e.target.value))}
-                            className="w-20 bg-[var(--color-bg-input)] border border-[var(--color-border)] rounded-lg px-2 py-1.5 text-xs focus:outline-none"
-                            title="Priority (higher = injected first)"
-                          />
-                          <select
-                            value={entryPosition}
-                            onChange={(e) => setEntryPosition(e.target.value)}
-                            className="bg-[var(--color-bg-input)] border border-[var(--color-border)] rounded-lg px-2 py-1.5 text-xs focus:outline-none"
-                          >
-                            <option value="before_char">{t("wb.before")}</option>
-                            <option value="after_char">{t("wb.after")}</option>
-                          </select>
-                          <button
-                            onClick={addEntry}
-                            disabled={!entryContent.trim()}
-                            className="ml-auto flex items-center gap-1 px-3 py-1.5 rounded-lg bg-[var(--color-teal-muted)] text-[var(--color-teal)] text-[11px] font-medium hover:bg-[var(--color-teal)] hover:text-[var(--color-bg-deep)] transition-colors disabled:opacity-40"
-                          >
-                            <Save size={11} />
-                            {t("wb.addEntry")}
-                          </button>
-                        </div>
-                      </div>
-                    </>
-                  )}
-                </div>
-              )}
-            </div>
-          ))}
+                            {showAdvanced && (
+                              <div className="flex items-center gap-2 flex-wrap pl-2 border-l-2 border-[var(--color-border)]">
+                                <input
+                                  value={entryForm.secondaryKeys}
+                                  onChange={(e) => setEntryForm(f => ({ ...f, secondaryKeys: e.target.value }))}
+                                  placeholder={t("wb.secKeysPh") || "Secondary keys"}
+                                  className="flex-1 min-w-[120px] bg-[var(--color-bg-input)] border border-[var(--color-border)] rounded-lg px-2 py-1.5 text-xs font-mono focus:outline-none"
+                                />
+                                <select
+                                  value={entryForm.selectiveLogic || ""}
+                                  onChange={(e) => setEntryForm(f => ({ ...f, selectiveLogic: e.target.value || null }))}
+                                  className="bg-[var(--color-bg-input)] border border-[var(--color-border)] rounded-lg px-2 py-1.5 text-xs focus:outline-none"
+                                >
+                                  <option value="">OR</option>
+                                  <option value="AND">AND</option>
+                                  <option value="NOT">NOT</option>
+                                </select>
+                                <button
+                                  onClick={() => setEntryForm(f => ({ ...f, constant: !f.constant }))}
+                                  className={`px-2 py-1 rounded text-[10px] ${entryForm.constant ? "bg-blue-500/15 text-blue-400" : "bg-[var(--color-bg-hover)] text-[var(--color-text-muted)]"}`}
+                                >CONST</button>
+                                <input
+                                  type="number"
+                                  min={-1}
+                                  max={8000}
+                                  value={entryForm.tokenBudget}
+                                  onChange={(e) => setEntryForm(f => ({ ...f, tokenBudget: Number(e.target.value) }))}
+                                  placeholder="budget"
+                                  className="w-16 bg-[var(--color-bg-input)] border border-[var(--color-border)] rounded-lg px-2 py-1.5 text-xs focus:outline-none"
+                                />
+                              </div>
+                            )}
+                            <button
+                              onClick={saveEntry}
+                              disabled={saving || !entryForm.content.trim()}
+                              className="w-full flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg bg-[var(--color-accent)] text-white text-xs font-medium hover:bg-[var(--color-accent-glow)] transition-colors disabled:opacity-40"
+                            >
+                              {saving ? <Loader2 size={11} className="animate-spin" /> : <Save size={11} />}
+                              {t("wb.addEntry")}
+                            </button>
+                          </div>
+                        )}
+                      </>
+                    )}
+                  </div>
+                )}
+              </div>
+            );
+          })}
         </div>
       )}
     </div>

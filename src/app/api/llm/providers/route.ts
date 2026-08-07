@@ -51,6 +51,31 @@ export async function POST(req: NextRequest) {
     baseUrl: baseUrl || null,
   });
 
+  // Auto-create a catch-all route so /chat works immediately. Users can add
+  // more specific regex routes (e.g. "/coding") later via the routes UI.
+  const existingRoutes = await db
+    .select({ id: schema.llmRoutes.id })
+    .from(schema.llmRoutes)
+    .where(
+      and(
+        eq(schema.llmRoutes.tenantId, session.tenantId),
+        eq(schema.llmRoutes.isActive, true)
+      )
+    )
+    .limit(1);
+
+  if (existingRoutes.length === 0) {
+    await db.insert(schema.llmRoutes).values({
+      id: `rt_${generateId(12)}`,
+      tenantId: session.tenantId,
+      name: `${name} (default)`,
+      providerId: id,
+      condition: "*",
+      priority: 0,
+      isActive: true,
+    });
+  }
+
   return NextResponse.json({ success: true, id });
 }
 

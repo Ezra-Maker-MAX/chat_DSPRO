@@ -5,7 +5,7 @@ import { createAnthropic } from "@ai-sdk/anthropic";
 import { createDeepSeek } from "@ai-sdk/deepseek";
 import { createGoogleGenerativeAI } from "@ai-sdk/google";
 
-type ProviderType = "openai" | "anthropic" | "deepseek" | "google";
+type ProviderType = "openai" | "anthropic" | "deepseek" | "google" | "custom";
 
 // The provider factory functions return structurally different client types,
 // so we use a loose type to avoid TS incompatibility across AI SDK providers.
@@ -98,6 +98,16 @@ function createProviderModel(
       case "google": {
         const client = createGoogleGenerativeAI({ apiKey, baseURL: baseUrl });
         return { model: client, modelId, provider };
+      }
+      case "custom": {
+        // Custom endpoint = OpenAI-compatible base URL (e.g. Agnes / LiteLLM /
+        // self-hosted vLLM). Reuse the OpenAI SDK with the user's baseURL.
+        if (!baseUrl) {
+          // Fall back to default OpenAI base URL if user didn't provide one;
+          // the call will fail informatively at request time.
+        }
+        const client = createOpenAI({ apiKey, baseURL: baseUrl });
+        return { model: client, modelId, provider: "openai" };
       }
       default:
         return null;

@@ -165,6 +165,11 @@ const en = {
   "settings.routing.desc":
     "Messages in your space are automatically routed through configured LLM providers. The gateway selects the best model based on routing rules (priority + prompt matching). Set up multiple providers for fallback and load balancing. API keys are stored securely and never exposed to clients.",
   "settings.bot": "Bot & AI Gateway",
+  "settings.routes.title": "LLM Routing Rules",
+  "settings.routes.desc":
+    "Routes decide which provider /chat and other AI commands use. Add at least one route — without one, AI features will say \"no provider configured\" even though providers exist.",
+  "settings.routes.add": "Add route",
+  "settings.routes.empty": "No routes yet. /chat cannot reach any provider.",
   "settings.memberNotice":
     "Space-wide settings (AI providers, bot, world books, members) are managed by the space admin. You can set up your own account login above so you can sign back in after logging out.",
   "settings.error.required": "Name, model, and API key are required",
@@ -480,6 +485,11 @@ const zh: Record<keyof typeof en, string> = {
   "settings.routing.desc":
     "空间内的消息会自动路由到已配置的 LLM 提供商。网关根据路由规则（优先级 + 提示词匹配）选择最优模型。配置多个提供商可实现故障转移与负载均衡。API 密钥安全存储，绝不暴露给客户端。",
   "settings.bot": "机器人 & AI 网关",
+  "settings.routes.title": "LLM 路由规则",
+  "settings.routes.desc":
+    "路由决定 /chat 等 AI 命令使用哪个提供商。至少添加一条路由——否则即使配了提供商，AI 也会报\"未配置\"。",
+  "settings.routes.add": "添加路由",
+  "settings.routes.empty": "暂无路由。/chat 当前无法连接任何提供商。",
   "settings.memberNotice":
     "空间级设置（AI 提供商、机器人、世界书、成员管理）由空间管理员统一配置。你可以在上方设置自己的账号密码，这样退出后还能重新登录回来。",
   "settings.error.required": "名称、模型和 API 密钥为必填项",

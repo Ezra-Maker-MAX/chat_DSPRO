@@ -23,6 +23,9 @@ export async function POST(req: NextRequest) {
   if (!session) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
+  if (session.role !== "admin") {
+    return NextResponse.json({ error: "Admin only" }, { status: 403 });
+  }
 
   const body = await req.json();
   const { name, providerId, condition, priority } = body;
@@ -49,6 +52,9 @@ export async function DELETE(req: NextRequest) {
   const session = await getSession();
   if (!session) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+  if (session.role !== "admin") {
+    return NextResponse.json({ error: "Admin only" }, { status: 403 });
   }
 
   const { searchParams } = new URL(req.url);

@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { useI18n } from "@/lib/i18n";
-import { Settings, Cpu, Plus, Trash2, Loader2, Check, Key, Globe, Bot, BookOpen, UserCircle, Users, LifeBuoy } from "lucide-react";
+import { Settings, Cpu, Plus, Trash2, Loader2, Check, Key, Globe, Bot, BookOpen, UserCircle, Users, LifeBuoy, Route, ArrowDownUp } from "lucide-react";
 import BotSettings from "@/components/settings/BotSettings";
 import WorldBooksManager from "@/components/settings/WorldBooksManager";
 import AccountPanel from "@/components/settings/AccountPanel";
@@ -20,14 +20,33 @@ interface LLM {
   isActive: boolean;
 }
 
+interface LLMRoute {
+  id: string;
+  name: string;
+  providerId: string;
+  condition: string;
+  priority: number;
+  isActive: boolean;
+}
+
 export default function SettingsPage() {
   const { t } = useI18n();
   const { userRole } = useLayout();
   const isAdmin = userRole === "admin";
   const [providers, setProviders] = useState<LLM[]>([]);
+  const [routes, setRoutes] = useState<LLMRoute[]>([]);
   const [loading, setLoading] = useState(true);
   const [showAdd, setShowAdd] = useState(false);
   const [error, setError] = useState("");
+
+  // Routes state
+  const [showAddRoute, setShowAddRoute] = useState(false);
+  const [routeName, setRouteName] = useState("");
+  const [routeProviderId, setRouteProviderId] = useState("");
+  const [routeCondition, setRouteCondition] = useState("*");
+  const [routePriority, setRoutePriority] = useState(0);
+  const [routeError, setRouteError] = useState("");
+  const [routeSaving, setRouteSaving] = useState(false);
 
   // Form state
   const [formName, setFormName] = useState("");
@@ -44,10 +63,17 @@ export default function SettingsPage() {
     setLoading(false);
   };
 
+  const fetchRoutes = async () => {
+    const res = await fetch("/api/llm/routes");
+    const data = await res.json();
+    setRoutes(data.routes || []);
+  };
+
   useEffect(() => {
     // Only admins can read/manage space-wide LLM providers
     if (isAdmin) {
       fetchProviders();
+      fetchRoutes();
     } else {
       setLoading(false);
     }
@@ -90,6 +116,48 @@ export default function SettingsPage() {
   const handleDelete = async (id: string) => {
     await fetch(`/api/llm/providers?id=${id}`, { method: "DELETE" });
     await fetchProviders();
+    // Refresh routes too — deleting a provider may leave dangling route refs
+    await fetchRoutes();
+  };
+
+  const handleAddRoute = async () => {
+    setRouteError("");
+    if (!routeName || !routeProviderId) {
+      setRouteError("Name and provider are required");
+      return;
+    }
+    setRouteSaving(true);
+    try {
+      const res = await fetch("/api/llm/routes", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          name: routeName,
+          providerId: routeProviderId,
+          condition: routeCondition || "*",
+          priority: routePriority,
+        }),
+      });
+      const data = await res.json();
+      if (data.error) {
+        setRouteError(data.error);
+      } else {
+        setShowAddRoute(false);
+        setRouteName("");
+        setRouteProviderId("");
+        setRouteCondition("*");
+        setRoutePriority(0);
+        await fetchRoutes();
+      }
+    } catch {
+      setRouteError("Failed to add route");
+    }
+    setRouteSaving(false);
+  };
+
+  const handleDeleteRoute = async (id: string) => {
+    await fetch(`/api/llm/routes?id=${id}`, { method: "DELETE" });
+    await fetchRoutes();
   };
 
   const resetForm = () => {
@@ -280,12 +348,159 @@ export default function SettingsPage() {
           )}
         </section>
 
-        {/* How to use section */}
-        <section className="mt-8 p-4 glass-card">
-          <h3 className="font-semibold text-sm mb-2">{t("settings.routing.title")}</h3>
-          <p className="text-xs text-[var(--color-text-secondary)] leading-relaxed">
-            {t("settings.routing.desc")}
+        {/* LLM Routing Rules — required for /chat to find a provider */}
+        <section className="mt-8">
+          <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center gap-2">
+              <Route size={16} className="text-[var(--color-accent-glow)]" />
+              <h2 className="font-semibold text-sm">{t("settings.routes.title")}</h2>
+              <span className="text-[9px] px-1.5 py-0.5 rounded-full bg-[var(--color-bg-elevated)] text-[var(--color-text-muted)]">
+                {routes.length}
+              </span>
+            </div>
+            {!showAddRoute && providers.length > 0 && (
+              <button
+                onClick={() => setShowAddRoute(true)}
+                className="flex items-center gap-1 px-2 py-1 rounded-lg bg-[var(--color-accent)] text-white text-xs font-medium hover:opacity-90"
+              >
+                <Plus size={12} />
+                {t("settings.routes.add")}
+              </button>
+            )}
+          </div>
+
+          <p className="text-xs text-[var(--color-text-muted)] mb-3 leading-relaxed">
+            {t("settings.routes.desc")}
           </p>
+
+          {showAddRoute && (
+            <div className="glass-card p-4 mb-3 space-y-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-[10px] font-medium text-[var(--color-text-muted)] uppercase mb-1">
+                    Name
+                  </label>
+                  <input
+                    value={routeName}
+                    onChange={(e) => setRouteName(e.target.value)}
+                    placeholder="e.g. Default"
+                    className="w-full bg-[var(--color-bg-input)] border border-[var(--color-border)] rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-[var(--color-accent)]"
+                  />
+                </div>
+                <div>
+                  <label className="block text-[10px] font-medium text-[var(--color-text-muted)] uppercase mb-1">
+                    Provider
+                  </label>
+                  <select
+                    value={routeProviderId}
+                    onChange={(e) => setRouteProviderId(e.target.value)}
+                    className="w-full bg-[var(--color-bg-input)] border border-[var(--color-border)] rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-[var(--color-accent)]"
+                  >
+                    <option value="">Select a provider…</option>
+                    {providers.map((p) => (
+                      <option key={p.id} value={p.id}>
+                        {p.name} ({p.provider})
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-[10px] font-medium text-[var(--color-text-muted)] uppercase mb-1">
+                    Condition (regex on user prompt, or *)
+                  </label>
+                  <input
+                    value={routeCondition}
+                    onChange={(e) => setRouteCondition(e.target.value)}
+                    placeholder="*"
+                    className="w-full bg-[var(--color-bg-input)] border border-[var(--color-border)] rounded-lg px-3 py-2 text-xs font-mono focus:outline-none focus:border-[var(--color-accent)]"
+                  />
+                </div>
+                <div>
+                  <label className="block text-[10px] font-medium text-[var(--color-text-muted)] uppercase mb-1">
+                    Priority (lower = first match)
+                  </label>
+                  <input
+                    type="number"
+                    value={routePriority}
+                    onChange={(e) => setRoutePriority(parseInt(e.target.value) || 0)}
+                    className="w-full bg-[var(--color-bg-input)] border border-[var(--color-border)] rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-[var(--color-accent)]"
+                  />
+                </div>
+              </div>
+              {routeError && (
+                <div className="text-xs text-[var(--color-danger)]">{routeError}</div>
+              )}
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={handleAddRoute}
+                  disabled={routeSaving}
+                  className="flex items-center gap-1 px-3 py-1.5 rounded-lg bg-[var(--color-accent)] text-white text-xs font-medium hover:opacity-90 disabled:opacity-50"
+                >
+                  {routeSaving ? <Loader2 size={12} className="animate-spin" /> : <Check size={12} />}
+                  Save
+                </button>
+                <button
+                  onClick={() => setShowAddRoute(false)}
+                  className="px-3 py-1.5 rounded-lg text-xs text-[var(--color-text-secondary)] hover:bg-[var(--color-bg-hover)]"
+                >
+                  Cancel
+                </button>
+              </div>
+            </div>
+          )}
+
+          {routes.length === 0 ? (
+            <div className="glass-card p-6 text-center border-dashed">
+              <ArrowDownUp size={20} className="mx-auto mb-2 text-[var(--color-text-muted)]" />
+              <p className="text-xs text-[var(--color-text-muted)]">
+                {t("settings.routes.empty")}
+              </p>
+              {providers.length > 0 && (
+                <p className="text-[10px] text-[var(--color-text-muted)] mt-2">
+                  Add a route pointing at one of your providers above to activate /chat.
+                </p>
+              )}
+            </div>
+          ) : (
+            <div className="space-y-2">
+              {routes
+                .slice()
+                .sort((a, b) => a.priority - b.priority)
+                .map((r) => {
+                  const provider = providers.find((p) => p.id === r.providerId);
+                  return (
+                    <div
+                      key={r.id}
+                      className="glass-card p-3 flex items-center gap-3 group"
+                    >
+                      <div className="w-8 h-8 rounded-lg bg-[var(--color-bg-elevated)] flex items-center justify-center">
+                        <Route size={14} className="text-[var(--color-accent-glow)]" />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2">
+                          <span className="font-medium text-xs">{r.name}</span>
+                          <span className="text-[9px] px-1.5 py-0.5 rounded-full bg-[var(--color-bg-elevated)] text-[var(--color-text-muted)] font-mono">
+                            {r.condition}
+                          </span>
+                        </div>
+                        <div className="text-[10px] text-[var(--color-text-muted)] mt-0.5 truncate">
+                          → {provider ? `${provider.name} (${provider.model})` : "⚠️ provider missing"}
+                        </div>
+                      </div>
+                      <span className="text-[9px] text-[var(--color-text-muted)] font-mono">
+                        p={r.priority}
+                      </span>
+                      <button
+                        onClick={() => handleDeleteRoute(r.id)}
+                        className="p-1.5 rounded-lg text-[var(--color-text-muted)] hover:text-[var(--color-danger)] hover:bg-[var(--color-bg-hover)] opacity-0 group-hover:opacity-100 transition-all"
+                      >
+                        <Trash2 size={12} />
+                      </button>
+                    </div>
+                  );
+                })}
+            </div>
+          )}
         </section>
 
         {/* Bot & AI Gateway */}

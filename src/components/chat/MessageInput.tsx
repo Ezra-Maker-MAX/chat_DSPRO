@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useRef, useCallback, useEffect } from "react";
+import { useI18n } from "@/lib/i18n";
 import { Send, ImagePlus, Mic, X, Play, Square } from "lucide-react";
 
 const BOT_COMMANDS = [
@@ -18,6 +19,7 @@ interface Props {
 }
 
 export default function MessageInput({ channelId, onSend, allowMedia, allowVoice }: Props) {
+  const { t } = useI18n();
   const [content, setContent] = useState("");
   const [sending, setSending] = useState(false);
   const [uploadedMedia, setUploadedMedia] = useState<{ id: string; url: string; type: string; name: string }[]>([]);
@@ -226,7 +228,7 @@ export default function MessageInput({ channelId, onSend, allowMedia, allowVoice
             disabled={uploading}
             className="px-3 py-1 text-xs rounded-md bg-[var(--color-accent)] text-white"
           >
-            {uploading ? "Uploading..." : "Attach"}
+            {uploading ? t("chat.uploading") : t("chat.attach")}
           </button>
           <button
             onClick={() => { setAudioBlob(null); setAudioUrl(null); }}
@@ -241,7 +243,7 @@ export default function MessageInput({ channelId, onSend, allowMedia, allowVoice
       {showCommands && (
         <div className="absolute bottom-full left-4 right-4 mb-2 rounded-xl border border-[var(--color-border)] bg-[var(--color-bg-elevated)] shadow-[0_10px_40px_rgba(0,0,0,0.5)] overflow-hidden z-30 animate-fade-in">
           <div className="px-4 py-2 text-[10px] uppercase tracking-wider text-[var(--color-text-muted)] border-b border-[var(--color-border)]">
-            Bot commands
+            {t("chat.bot.commands")}
           </div>
           {BOT_COMMANDS.filter((c) =>
             c.name.startsWith(content.trimStart().slice(1).toLowerCase())
@@ -280,7 +282,7 @@ export default function MessageInput({ channelId, onSend, allowMedia, allowVoice
             onClick={() => fileInputRef.current?.click()}
             disabled={uploading}
             className="p-2 rounded-lg hover:bg-[var(--color-bg-hover)] transition-colors text-[var(--color-text-muted)] hover:text-[var(--color-text-secondary)] shrink-0"
-            title="Upload image or video"
+            title={t("chat.upload.title")}
           >
             <ImagePlus size={20} />
           </button>
@@ -303,7 +305,7 @@ export default function MessageInput({ channelId, onSend, allowMedia, allowVoice
                 ? "bg-[var(--color-danger)] text-white animate-pulse"
                 : "hover:bg-[var(--color-bg-hover)] text-[var(--color-text-muted)] hover:text-[var(--color-text-secondary)]"
             }`}
-            title={recording ? "Stop recording" : "Record voice"}
+            title={recording ? t("chat.stop.title") : t("chat.record.title")}
           >
             {recording ? <Square size={20} /> : <Mic size={20} />}
           </button>
@@ -315,7 +317,7 @@ export default function MessageInput({ channelId, onSend, allowMedia, allowVoice
           value={content}
           onChange={(e) => setContent(e.target.value)}
           onKeyDown={handleKeyDown}
-          placeholder="Type a message... (links are not allowed)"
+          placeholder={t("chat.input.placeholder")}
           rows={1}
           className="flex-1 bg-[var(--color-bg-input)] border border-[var(--color-border)] rounded-xl px-4 py-2.5 text-sm text-[var(--color-text-primary)] placeholder:text-[var(--color-text-muted)] resize-none focus:outline-none focus:border-[var(--color-accent)] transition-colors max-h-32"
           style={{ fontFamily: "var(--font-body)" }}

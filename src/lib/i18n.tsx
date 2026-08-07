@@ -1,0 +1,502 @@
+"use client";
+
+import { createContext, useContext, useEffect, useState, useCallback } from "react";
+
+// ============================================================
+// Lightweight i18n: client-side Context + dictionaries.
+// Add a language by extending DICTIONARIES below.
+// ============================================================
+
+export type Locale = "en" | "zh";
+export const SUPPORTED_LOCALES: Locale[] = ["en", "zh"];
+
+const STORAGE_KEY = "ch_locale";
+
+const en = {
+  // Landing
+  "landing.tagline": "anonymous spaces that matter",
+  "landing.subtitle":
+    "Private, invite-only chat spaces with media sharing, built-in games, and multi-model AI. No tracking. No sharing. Just conversation.",
+  "landing.cta": "Enter with invite code",
+  "landing.feature.multi": "Multi-tenant",
+  "landing.feature.invite": "Invite-only",
+  "landing.feature.games": "Game Plaza",
+  "landing.feature.ai": "Multi-Model AI",
+  "landing.footer": "Built for Vercel + Turso · Open source",
+
+  // Join
+  "join.back": "Back",
+  "join.title": "Join a Space",
+  "join.invite.label": "Invite Code",
+  "join.invite.placeholder": "XXXX-XXXX-XXXX",
+  "join.nickname.label": "Your Nickname",
+  "join.nickname.placeholder": "Choose an alias...",
+  "join.nickname.hint": "This is how others will see you in the space.",
+  "join.submit": "Enter Space",
+  "join.submitting": "Joining...",
+  "join.noCode": "Don't have an invite code? Ask the space admin.",
+  "join.error.both": "Both fields are required",
+  "join.error.nickname": "Nickname must be 2-20 characters",
+  "join.error.network": "Connection failed. Please try again.",
+
+  // Sidebar
+  "sidebar.online": "{count} online",
+  "sidebar.channels": "Channels",
+  "sidebar.invite": "Invite friends",
+  "sidebar.newSpace": "New space",
+  "sidebar.games": "Game Plaza",
+  "sidebar.settings": "Settings",
+  "sidebar.leave": "Leave Space",
+  "sidebar.leaving": "Leaving...",
+
+  // Invite modal
+  "invite.title": "Invite friends",
+  "invite.subtitle": "Share a code — new invites let people join this space",
+  "invite.unlimited": "Unlimited",
+  "invite.unlimited.desc": "Many friends",
+  "invite.onetime": "One-time",
+  "invite.onetime.desc": "Single use",
+  "invite.generate": "Generate invite code",
+  "invite.generating": "Generating...",
+  "invite.copy": "Copy",
+  "invite.copied": "Copied",
+  "invite.joinLink": "Copy join link",
+  "invite.newCode": "New code",
+  "invite.done": "Done",
+  "invite.note": "Anyone with this code joins the same anonymous space. Codes never expire unless you choose one-time.",
+  "invite.error.gen": "Failed to generate invite",
+  "invite.error.network": "Network error — please try again",
+
+  // New space modal
+  "space.title": "Create a new space",
+  "space.subtitle": "A private, anonymous room with its own invite code",
+  "space.name.label": "Space name",
+  "space.name.placeholder": "e.g. Weekend Squad",
+  "space.desc.label": "Description (optional)",
+  "space.desc.placeholder": "What is this space about?",
+  "space.create": "Create space",
+  "space.creating": "Creating...",
+  "space.error.name": "Give your space a name (2-40 characters)",
+  "space.error.network": "Network error — please try again",
+
+  // Chat
+  "chat.noMessages": "No messages yet. Be the first to say something.",
+  "chat.loadEarlier": "Load earlier messages",
+  "chat.sending": "Sending...",
+  "chat.input.placeholder": "Type a message... (links are not allowed)",
+  "chat.upload.title": "Upload image or video",
+  "chat.record.title": "Record voice",
+  "chat.stop.title": "Stop recording",
+  "chat.uploading": "Uploading...",
+  "chat.attach": "Attach",
+  "chat.bot.commands": "Bot commands",
+  "chat.justNow": "just now",
+
+  // Games
+  "games.title": "Game Plaza",
+  "games.subtitle": "Install MCP plugins to add games, utilities, and AI tools to your space.",
+  "games.tab.plugins": "Plugins",
+  "games.tab.characters": "Characters",
+  "games.tryCharacters": "Try Characters (roleplay)",
+  "games.installed": "Installed ({count})",
+  "games.marketplace": "Marketplace",
+  "games.install": "Install",
+  "games.installing": "Installing...",
+  "games.installedLabel": "Installed",
+  "games.endpoint.placeholder": "MCP endpoint URL...",
+  "games.error.install": "Installation failed",
+  "games.error.uninstall": "Uninstall failed",
+
+  // Roleplay
+  "rp.title": "Characters",
+  "rp.subtitle": "Roleplay companions with world books. Pick one to start chatting.",
+  "rp.new": "New character",
+  "rp.create.title": "Create character card",
+  "rp.name": "Name *",
+  "rp.name.ph": "e.g. Kira the Starfarer",
+  "rp.description": "Description",
+  "rp.description.ph": "Who is this character? Appearance, role, vibe…",
+  "rp.personality": "Personality",
+  "rp.personality.ph": "Traits, quirks, speech style…",
+  "rp.scenario": "Scenario",
+  "rp.scenario.ph": "Where does the conversation start? What's the setup?",
+  "rp.firstMes": "First message",
+  "rp.firstMes.ph": "The character's opening line when a new session starts…",
+  "rp.mesExample": "Example dialogue",
+  "rp.systemPrompt": "System prompt (optional)",
+  "rp.systemPrompt.ph": "Extra instructions for the model…",
+  "rp.worldBook": "World book (lore)",
+  "rp.worldBook.none": "None",
+  "rp.worldBook.hint": "Lore entries activate when their keywords appear in the conversation.",
+  "rp.save": "Save character",
+  "rp.cancel": "Cancel",
+  "rp.noCards.title": "No characters yet.",
+  "rp.noCards.hint": "Create your first companion with the button above.",
+  "rp.noWorldBook": "no world book",
+  "rp.worldBookAttached": "world book attached",
+  "rp.delete.confirm": "Delete this character? Chat history will be lost.",
+  "rp.talkTo": "Talk to {name}",
+  "rp.startHint": "Say something to {name} to begin.",
+  "rp.typing": "{name} is typing…",
+  "rp.empty": "No description.",
+  "rp.error.load": "Failed to load characters",
+  "rp.error.save": "Failed to save character",
+  "rp.error.delete": "Failed to delete character",
+  "rp.error.session": "Failed to load session",
+  "rp.error.network": "⚠️ Network error — try again.",
+
+  // Settings
+  "settings.title": "Space Settings",
+  "settings.llm": "LLM Providers",
+  "settings.addProvider": "Add Provider",
+  "settings.form.name": "Display Name",
+  "settings.form.name.ph": "e.g., GPT-4o Main",
+  "settings.form.provider": "Provider",
+  "settings.form.model": "Model ID",
+  "settings.form.model.ph": "e.g., gpt-4o, claude-sonnet-4-20250514",
+  "settings.form.apiKey": "API Key",
+  "settings.form.apiKey.ph": "sk-...",
+  "settings.form.baseUrl": "Base URL (optional)",
+  "settings.form.baseUrl.ph": "Custom endpoint URL",
+  "settings.save": "Save",
+  "settings.cancel": "Cancel",
+  "settings.empty.title": "No LLM providers configured yet.",
+  "settings.empty.hint": "Add providers to enable AI features in your space.",
+  "settings.routing.title": "How LLM Routing Works",
+  "settings.routing.desc":
+    "Messages in your space are automatically routed through configured LLM providers. The gateway selects the best model based on routing rules (priority + prompt matching). Set up multiple providers for fallback and load balancing. API keys are stored securely and never exposed to clients.",
+  "settings.bot": "Bot & AI Gateway",
+  "settings.error.required": "Name, model, and API key are required",
+  "settings.error.add": "Failed to add provider",
+
+  // Bot settings
+  "bot.identity": "Bot identity",
+  "bot.name": "Bot name",
+  "bot.enabled": "Bot enabled in this space",
+  "bot.systemPrompt": "System prompt",
+  "bot.systemPrompt.ph": "How the bot should behave in chat…",
+  "bot.imageGateway": "Image gateway (/imagine)",
+  "bot.configured": "configured",
+  "bot.provider": "Provider",
+  "bot.model": "Model",
+  "bot.apiKey": "API key {suffix}",
+  "bot.apiKey.keep": "(leave blank to keep existing)",
+  "bot.apiKey.ph": "sk-...",
+  "bot.baseUrl": "Base URL (optional)",
+  "bot.baseUrl.ph": "https://api.openai.com/v1",
+  "bot.cooldown": "Cooldown (seconds)",
+  "bot.cooldown.hint":
+    "Multi-user requests are queued automatically. Each completed image updates the cooldown; users behind in queue wait their turn.",
+  "bot.save": "Save bot settings",
+  "bot.saving": "Saving...",
+  "bot.saved": "Saved",
+  "bot.lastImage": "Last image: {time}",
+  "bot.error.load": "Failed to load bot settings",
+  "bot.error.network": "Network error — please try again",
+
+  // World books
+  "wb.title": "World Books (lore)",
+  "wb.create": "Create world book",
+  "wb.name.ph": "Book name (e.g. 'Aetherian Empire Lore')",
+  "wb.desc.ph": "Description (optional)",
+  "wb.createBtn": "Create",
+  "wb.empty.title": "No world books yet.",
+  "wb.empty.hint":
+    "Books hold lore entries that inject background knowledge when keywords appear in roleplay.",
+  "wb.delete.confirm": "Delete this world book and all its entries?",
+  "wb.noEntries": "No entries yet. Add lore with keywords below.",
+  "wb.keys.ph": "Trigger keywords, comma-separated (e.g. aether, empire, mage)",
+  "wb.content.ph": "Lore content injected when keywords appear…",
+  "wb.addEntry": "Add entry",
+  "wb.priority": "priority {p}",
+  "wb.error.load": "Failed to load world books",
+  "wb.error.create": "Failed to create book",
+  "wb.error.delete": "Failed to delete book",
+  "wb.error.add": "Failed to add entry",
+  "wb.error.deleteEntry": "Failed to delete entry",
+  "wb.before": "Before character",
+  "wb.after": "After character",
+
+  // Language switcher
+  "lang.label": "Language",
+  "lang.en": "English",
+  "lang.zh": "中文",
+} as const;
+
+const zh: Record<keyof typeof en, string> = {
+  // Landing
+  "landing.tagline": "值得在意的匿名空间",
+  "landing.subtitle":
+    "私密、仅限邀请的聊天空间，支持媒体分享、内置游戏与多模型 AI。无追踪、不共享、纯粹对话。",
+  "landing.cta": "输入邀请码进入",
+  "landing.feature.multi": "多租户",
+  "landing.feature.invite": "仅限邀请",
+  "landing.feature.games": "游戏广场",
+  "landing.feature.ai": "多模型 AI",
+  "landing.footer": "为 Vercel + Turso 构建 · 开源",
+
+  // Join
+  "join.back": "返回",
+  "join.title": "加入空间",
+  "join.invite.label": "邀请码",
+  "join.invite.placeholder": "XXXX-XXXX-XXXX",
+  "join.nickname.label": "你的昵称",
+  "join.nickname.placeholder": "取一个代号...",
+  "join.nickname.hint": "其他人在空间里会这样看到你。",
+  "join.submit": "进入空间",
+  "join.submitting": "加入中...",
+  "join.noCode": "没有邀请码？问问空间管理员。",
+  "join.error.both": "两个字段都是必填的",
+  "join.error.nickname": "昵称需为 2-20 个字符",
+  "join.error.network": "连接失败，请重试。",
+
+  // Sidebar
+  "sidebar.online": "{count} 人在线",
+  "sidebar.channels": "频道",
+  "sidebar.invite": "邀请朋友",
+  "sidebar.newSpace": "新建空间",
+  "sidebar.games": "游戏广场",
+  "sidebar.settings": "设置",
+  "sidebar.leave": "退出空间",
+  "sidebar.leaving": "退出中...",
+
+  // Invite modal
+  "invite.title": "邀请朋友",
+  "invite.subtitle": "分享一个邀请码，朋友即可加入这个空间",
+  "invite.unlimited": "不限次数",
+  "invite.unlimited.desc": "多个朋友",
+  "invite.onetime": "一次性",
+  "invite.onetime.desc": "仅用一次",
+  "invite.generate": "生成邀请码",
+  "invite.generating": "生成中...",
+  "invite.copy": "复制",
+  "invite.copied": "已复制",
+  "invite.joinLink": "复制加入链接",
+  "invite.newCode": "换一个",
+  "invite.done": "完成",
+  "invite.note": "任何人用这个码都会加入同一个匿名空间。除非选择一次性，否则邀请码永不过期。",
+  "invite.error.gen": "生成邀请码失败",
+  "invite.error.network": "网络错误，请重试",
+
+  // New space modal
+  "space.title": "创建新空间",
+  "space.subtitle": "一个私密、匿名的房间，有独立的邀请码",
+  "space.name.label": "空间名称",
+  "space.name.placeholder": "例如：周末小队",
+  "space.desc.label": "描述（可选）",
+  "space.desc.placeholder": "这个空间是聊什么的？",
+  "space.create": "创建空间",
+  "space.creating": "创建中...",
+  "space.error.name": "给空间起个名字（2-40 个字符）",
+  "space.error.network": "网络错误，请重试",
+
+  // Chat
+  "chat.noMessages": "还没有消息，来说第一句吧。",
+  "chat.loadEarlier": "加载更早的消息",
+  "chat.sending": "发送中...",
+  "chat.input.placeholder": "输入消息...（不支持链接）",
+  "chat.upload.title": "上传图片或视频",
+  "chat.record.title": "录制语音",
+  "chat.stop.title": "停止录音",
+  "chat.uploading": "上传中...",
+  "chat.attach": "附上",
+  "chat.bot.commands": "机器人命令",
+  "chat.justNow": "刚刚",
+
+  // Games
+  "games.title": "游戏广场",
+  "games.subtitle": "安装 MCP 插件，为你的空间添加游戏、工具与 AI 能力。",
+  "games.tab.plugins": "插件",
+  "games.tab.characters": "角色",
+  "games.tryCharacters": "试试角色（陪聊）",
+  "games.installed": "已安装（{count}）",
+  "games.marketplace": "插件市场",
+  "games.install": "安装",
+  "games.installing": "安装中...",
+  "games.installedLabel": "已安装",
+  "games.endpoint.placeholder": "MCP 端点 URL...",
+  "games.error.install": "安装失败",
+  "games.error.uninstall": "卸载失败",
+
+  // Roleplay
+  "rp.title": "角色",
+  "rp.subtitle": "带世界书的陪聊角色。选一个开始对话。",
+  "rp.new": "新建角色",
+  "rp.create.title": "创建角色卡",
+  "rp.name": "名称 *",
+  "rp.name.ph": "例如：星际漫游者琪拉",
+  "rp.description": "描述",
+  "rp.description.ph": "这个角色是谁？外貌、身份、气质……",
+  "rp.personality": "性格",
+  "rp.personality.ph": "特质、怪癖、说话风格……",
+  "rp.scenario": "场景",
+  "rp.scenario.ph": "对话从哪里开始？设定是什么？",
+  "rp.firstMes": "开场白",
+  "rp.firstMes.ph": "新会话开始时角色的第一句话……",
+  "rp.mesExample": "示例对话",
+  "rp.systemPrompt": "系统提示词（可选）",
+  "rp.systemPrompt.ph": "给模型的额外指令……",
+  "rp.worldBook": "世界书（背景设定）",
+  "rp.worldBook.none": "无",
+  "rp.worldBook.hint": "对话中出现关键词时，对应的背景条目会自动生效。",
+  "rp.save": "保存角色",
+  "rp.cancel": "取消",
+  "rp.noCards.title": "还没有角色。",
+  "rp.noCards.hint": "用上面的按钮创建你的第一个伙伴。",
+  "rp.noWorldBook": "无世界书",
+  "rp.worldBookAttached": "已挂载世界书",
+  "rp.delete.confirm": "删除这个角色？聊天记录会丢失。",
+  "rp.talkTo": "和 {name} 聊聊",
+  "rp.startHint": "对 {name} 说点什么开始吧。",
+  "rp.typing": "{name} 正在输入…",
+  "rp.empty": "无描述。",
+  "rp.error.load": "加载角色失败",
+  "rp.error.save": "保存角色失败",
+  "rp.error.delete": "删除角色失败",
+  "rp.error.session": "加载会话失败",
+  "rp.error.network": "⚠️ 网络错误，请重试。",
+
+  // Settings
+  "settings.title": "空间设置",
+  "settings.llm": "LLM 提供商",
+  "settings.addProvider": "添加提供商",
+  "settings.form.name": "显示名称",
+  "settings.form.name.ph": "例如：GPT-4o 主模型",
+  "settings.form.provider": "提供商",
+  "settings.form.model": "模型 ID",
+  "settings.form.model.ph": "例如：gpt-4o、claude-sonnet-4-20250514",
+  "settings.form.apiKey": "API 密钥",
+  "settings.form.apiKey.ph": "sk-...",
+  "settings.form.baseUrl": "基础 URL（可选）",
+  "settings.form.baseUrl.ph": "自定义端点 URL",
+  "settings.save": "保存",
+  "settings.cancel": "取消",
+  "settings.empty.title": "还没有配置 LLM 提供商。",
+  "settings.empty.hint": "添加提供商以启用空间内的 AI 功能。",
+  "settings.routing.title": "LLM 路由如何工作",
+  "settings.routing.desc":
+    "空间内的消息会自动路由到已配置的 LLM 提供商。网关根据路由规则（优先级 + 提示词匹配）选择最优模型。配置多个提供商可实现故障转移与负载均衡。API 密钥安全存储，绝不暴露给客户端。",
+  "settings.bot": "机器人 & AI 网关",
+  "settings.error.required": "名称、模型和 API 密钥为必填项",
+  "settings.error.add": "添加提供商失败",
+
+  // Bot settings
+  "bot.identity": "机器人身份",
+  "bot.name": "机器人名称",
+  "bot.enabled": "在此空间启用机器人",
+  "bot.systemPrompt": "系统提示词",
+  "bot.systemPrompt.ph": "机器人在聊天中应如何表现……",
+  "bot.imageGateway": "生图网关（/imagine）",
+  "bot.configured": "已配置",
+  "bot.provider": "提供商",
+  "bot.model": "模型",
+  "bot.apiKey": "API 密钥{suffix}",
+  "bot.apiKey.keep": "（留空则保留现有）",
+  "bot.apiKey.ph": "sk-...",
+  "bot.baseUrl": "基础 URL（可选）",
+  "bot.baseUrl.ph": "https://api.openai.com/v1",
+  "bot.cooldown": "冷却时间（秒）",
+  "bot.cooldown.hint":
+    "多用户请求会自动排队。每次生图完成后会更新冷却计时，队列中的用户依次等待。",
+  "bot.save": "保存机器人设置",
+  "bot.saving": "保存中...",
+  "bot.saved": "已保存",
+  "bot.lastImage": "上次生图：{time}",
+  "bot.error.load": "加载机器人设置失败",
+  "bot.error.network": "网络错误，请重试",
+
+  // World books
+  "wb.title": "世界书（背景设定）",
+  "wb.create": "创建世界书",
+  "wb.name.ph": "书名（例如「以太帝国编年史」）",
+  "wb.desc.ph": "描述（可选）",
+  "wb.createBtn": "创建",
+  "wb.empty.title": "还没有世界书。",
+  "wb.empty.hint": "世界书存放背景条目，在陪聊对话中出现关键词时自动注入相关知识。",
+  "wb.delete.confirm": "删除这本世界书及其所有条目？",
+  "wb.noEntries": "还没有条目，用下面的关键词添加背景设定。",
+  "wb.keys.ph": "触发关键词，逗号分隔（例如：以太、帝国、法师）",
+  "wb.content.ph": "出现关键词时注入的背景内容……",
+  "wb.addEntry": "添加条目",
+  "wb.priority": "优先级 {p}",
+  "wb.error.load": "加载世界书失败",
+  "wb.error.create": "创建世界书失败",
+  "wb.error.delete": "删除世界书失败",
+  "wb.error.add": "添加条目失败",
+  "wb.error.deleteEntry": "删除条目失败",
+  "wb.before": "角色之前",
+  "wb.after": "角色之后",
+
+  // Language switcher
+  "lang.label": "语言",
+  "lang.en": "English",
+  "lang.zh": "中文",
+};
+
+const DICTIONARIES: Record<Locale, Record<keyof typeof en, string>> = { en, zh };
+
+export type TKey = keyof typeof en;
+
+interface I18nContextValue {
+  locale: Locale;
+  setLocale: (l: Locale) => void;
+  t: (key: TKey, params?: Record<string, string | number>) => string;
+}
+
+const I18nContext = createContext<I18nContextValue | null>(null);
+
+function interpolate(template: string, params?: Record<string, string | number>): string {
+  if (!params) return template;
+  return template.replace(/\{(\w+)\}/g, (_, key) =>
+    params[key] !== undefined ? String(params[key]) : `{${key}}`
+  );
+}
+
+export function I18nProvider({ children }: { children: React.ReactNode }) {
+  const [locale, setLocaleState] = useState<Locale>("en");
+
+  // Hydrate from localStorage after mount (avoids SSR mismatch)
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem(STORAGE_KEY);
+      if (saved && (saved === "en" || saved === "zh")) {
+        setLocaleState(saved);
+      } else {
+        // Default to browser language
+        const navLang = navigator.language?.toLowerCase() || "";
+        if (navLang.startsWith("zh")) setLocaleState("zh");
+      }
+    } catch {}
+  }, []);
+
+  const setLocale = useCallback((l: Locale) => {
+    setLocaleState(l);
+    try {
+      localStorage.setItem(STORAGE_KEY, l);
+    } catch {}
+  }, []);
+
+  const t = useCallback(
+    (key: TKey, params?: Record<string, string | number>) => {
+      const dict = DICTIONARIES[locale] || en;
+      const template = dict[key] ?? en[key] ?? key;
+      return interpolate(template, params);
+    },
+    [locale]
+  );
+
+  return (
+    <I18nContext.Provider value={{ locale, setLocale, t }}>
+      {children}
+    </I18nContext.Provider>
+  );
+}
+
+export function useI18n() {
+  const ctx = useContext(I18nContext);
+  if (!ctx) {
+    // Safe fallback (e.g. server components) — returns English
+    return { locale: "en" as Locale, setLocale: () => {}, t: (k: TKey) => en[k] ?? k };
+  }
+  return ctx;
+}

@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import MessageBubble from "./MessageBubble";
 import MessageInput from "./MessageInput";
+import { useI18n } from "@/lib/i18n";
 import { Loader2 } from "lucide-react";
 
 interface Message {
@@ -34,6 +35,7 @@ export default function ChatArea({
   const [messages, setMessages] = useState<Message[]>([]);
   const [loading, setLoading] = useState(true);
   const [hasMore, setHasMore] = useState(false);
+  const { t } = useI18n();
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
 
@@ -168,14 +170,14 @@ export default function ChatArea({
         ) : messages.length === 0 ? (
           <div className="flex flex-col items-center justify-center h-full text-[var(--color-text-muted)] gap-2">
             <div className="text-4xl">💬</div>
-            <p className="text-sm">No messages yet. Be the first to say something.</p>
+            <p className="text-sm">{t("chat.noMessages")}</p>
           </div>
         ) : (
           <>
             {hasMore && (
               <div className="text-center py-2">
                 <button className="text-xs text-[var(--color-accent)] hover:underline">
-                  Load earlier messages
+                  {t("chat.loadEarlier")}
                 </button>
               </div>
             )}

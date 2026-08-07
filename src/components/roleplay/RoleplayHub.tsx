@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef, useCallback } from "react";
+import { useI18n } from "@/lib/i18n";
 import {
   Bot,
   Plus,
@@ -48,6 +49,7 @@ const DEFAULT_FIELDS = {
 };
 
 export default function RoleplayHub() {
+  const { t } = useI18n();
   const [cards, setCards] = useState<CharacterCard[]>([]);
   const [books, setBooks] = useState<WorldBook[]>([]);
   const [loading, setLoading] = useState(true);
@@ -78,11 +80,11 @@ export default function RoleplayHub() {
       setCards(cardsData.cards || []);
       setBooks(booksData.books || []);
     } catch {
-      setError("Failed to load characters");
+      setError(t("rp.error.load"));
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [t]);
 
   useEffect(() => {
     fetchAll();
@@ -107,7 +109,7 @@ export default function RoleplayHub() {
         setChat([{ role: "assistant", content: data.card.firstMes }]);
       }
     } catch {
-      setError("Failed to load session");
+      setError(t("rp.error.session"));
     } finally {
       setSending(false);
     }
@@ -132,7 +134,7 @@ export default function RoleplayHub() {
         setChat((prev) => [...prev, { role: "assistant", content: `⚠️ ${data.error}` }]);
       }
     } catch {
-      setChat((prev) => [...prev, { role: "assistant", content: "⚠️ Network error — try again." }]);
+      setChat((prev) => [...prev, { role: "assistant", content: t("rp.error.network") }]);
     } finally {
       setSending(false);
     }
@@ -140,7 +142,7 @@ export default function RoleplayHub() {
 
   const saveCard = async () => {
     if (!form.name.trim()) {
-      setError("Give the character a name");
+      setError(t("rp.name"));
       return;
     }
     setError("");
@@ -159,18 +161,18 @@ export default function RoleplayHub() {
       setForm({ name: "", ...DEFAULT_FIELDS });
       await fetchAll();
     } catch {
-      setError("Failed to save character");
+      setError(t("rp.error.save"));
     }
   };
 
   const deleteCard = async (id: string) => {
-    if (!confirm("Delete this character? Chat history will be lost.")) return;
+    if (!confirm(t("rp.delete.confirm"))) return;
     try {
       await fetch(`/api/characters?id=${id}`, { method: "DELETE" });
       if (activeCard?.id === id) setActiveCard(null);
       await fetchAll();
     } catch {
-      setError("Failed to delete character");
+      setError(t("rp.error.delete"));
     }
   };
 
@@ -196,7 +198,7 @@ export default function RoleplayHub() {
               {activeCard.name}
             </h2>
             <p className="text-[11px] text-[var(--color-text-muted)] truncate">
-              {activeCard.description?.slice(0, 60) || "No description"}
+              {activeCard.description?.slice(0, 60) || t("rp.empty")}
             </p>
           </div>
           <button
@@ -212,7 +214,7 @@ export default function RoleplayHub() {
           {chat.length === 0 && !sending && (
             <div className="flex flex-col items-center justify-center h-full text-[var(--color-text-muted)] gap-2 text-center px-6">
               <Sparkles size={20} className="text-[var(--color-teal)]" />
-              <p className="text-sm">Say something to {activeCard.name} to begin.</p>
+              <p className="text-sm">{t("rp.startHint", { name: activeCard.name })}</p>
             </div>
           )}
           {chat.map((m, i) => (
@@ -232,7 +234,7 @@ export default function RoleplayHub() {
             <div className="flex justify-start">
               <div className="px-4 py-2.5 rounded-2xl bg-[var(--color-bg-elevated)] border border-[var(--color-teal)]/15 flex items-center gap-2">
                 <Loader2 size={14} className="animate-spin text-[var(--color-teal)]" />
-                <span className="text-xs text-[var(--color-text-muted)]">{activeCard.name} is typing…</span>
+                <span className="text-xs text-[var(--color-text-muted)]">{t("rp.typing", { name: activeCard.name })}</span>
               </div>
             </div>
           )}
@@ -251,7 +253,7 @@ export default function RoleplayHub() {
                   sendMessage();
                 }
               }}
-              placeholder={`Talk to ${activeCard.name}…`}
+              placeholder={t("rp.talkTo", { name: activeCard.name })}
               rows={1}
               className="flex-1 bg-[var(--color-bg-input)] border border-[var(--color-border)] rounded-xl px-4 py-2.5 text-sm text-[var(--color-text-primary)] placeholder:text-[var(--color-text-muted)] resize-none focus:outline-none focus:border-[var(--color-accent)] transition-colors max-h-32"
             />
@@ -280,11 +282,11 @@ export default function RoleplayHub() {
                 <Bot size={16} className="text-[var(--color-teal)]" />
               </div>
               <h1 className="font-[family-name:var(--font-display)] font-bold text-lg">
-                Characters
+                {t("rp.title")}
               </h1>
             </div>
             <p className="text-xs text-[var(--color-text-secondary)]">
-              Roleplay companions with world books. Pick one to start chatting.
+              {t("rp.subtitle")}
             </p>
           </div>
           <button
@@ -296,7 +298,7 @@ export default function RoleplayHub() {
             className="flex items-center gap-1.5 px-3 py-2 rounded-lg bg-[var(--color-accent)] text-white text-xs font-medium hover:bg-[var(--color-accent-glow)] transition-colors"
           >
             <Plus size={14} />
-            New character
+            {t("rp.new")}
           </button>
         </div>
 
@@ -309,59 +311,59 @@ export default function RoleplayHub() {
         {/* Editor */}
         {editing && (
           <div className="glass-card p-5 mb-6 animate-fade-in">
-            <h3 className="font-medium text-sm mb-4">Create character card</h3>
+            <h3 className="font-medium text-sm mb-4">{t("rp.create.title")}</h3>
             <div className="space-y-3">
               <div>
-                <label className="block text-xs text-[var(--color-text-muted)] mb-1">Name *</label>
+                <label className="block text-xs text-[var(--color-text-muted)] mb-1">{t("rp.name")}</label>
                 <input
                   value={form.name}
                   onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))}
-                  placeholder="e.g. Kira the Starfarer"
+                  placeholder={t("rp.name.ph")}
                   className="w-full bg-[var(--color-bg-input)] border border-[var(--color-border)] rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-[var(--color-accent)]"
                 />
               </div>
               <div>
-                <label className="block text-xs text-[var(--color-text-muted)] mb-1">Description</label>
+                <label className="block text-xs text-[var(--color-text-muted)] mb-1">{t("rp.description")}</label>
                 <textarea
                   value={form.description}
                   onChange={(e) => setForm((f) => ({ ...f, description: e.target.value }))}
-                  placeholder="Who is this character? Appearance, role, vibe…"
+                  placeholder={t("rp.description.ph")}
                   rows={2}
                   className="w-full bg-[var(--color-bg-input)] border border-[var(--color-border)] rounded-lg px-3 py-2 text-sm resize-none focus:outline-none focus:border-[var(--color-accent)]"
                 />
               </div>
               <div>
-                <label className="block text-xs text-[var(--color-text-muted)] mb-1">Personality</label>
+                <label className="block text-xs text-[var(--color-text-muted)] mb-1">{t("rp.personality")}</label>
                 <textarea
                   value={form.personality}
                   onChange={(e) => setForm((f) => ({ ...f, personality: e.target.value }))}
-                  placeholder="Traits, quirks, speech style…"
+                  placeholder={t("rp.personality.ph")}
                   rows={2}
                   className="w-full bg-[var(--color-bg-input)] border border-[var(--color-border)] rounded-lg px-3 py-2 text-sm resize-none focus:outline-none focus:border-[var(--color-accent)]"
                 />
               </div>
               <div>
-                <label className="block text-xs text-[var(--color-text-muted)] mb-1">Scenario</label>
+                <label className="block text-xs text-[var(--color-text-muted)] mb-1">{t("rp.scenario")}</label>
                 <textarea
                   value={form.scenario}
                   onChange={(e) => setForm((f) => ({ ...f, scenario: e.target.value }))}
-                  placeholder="Where does the conversation start? What's the setup?"
+                  placeholder={t("rp.scenario.ph")}
                   rows={2}
                   className="w-full bg-[var(--color-bg-input)] border border-[var(--color-border)] rounded-lg px-3 py-2 text-sm resize-none focus:outline-none focus:border-[var(--color-accent)]"
                 />
               </div>
               <div>
-                <label className="block text-xs text-[var(--color-text-muted)] mb-1">First message</label>
+                <label className="block text-xs text-[var(--color-text-muted)] mb-1">{t("rp.firstMes")}</label>
                 <textarea
                   value={form.firstMes}
                   onChange={(e) => setForm((f) => ({ ...f, firstMes: e.target.value }))}
-                  placeholder="The character's opening line when a new session starts…"
+                  placeholder={t("rp.firstMes.ph")}
                   rows={2}
                   className="w-full bg-[var(--color-bg-input)] border border-[var(--color-border)] rounded-lg px-3 py-2 text-sm resize-none focus:outline-none focus:border-[var(--color-accent)]"
                 />
               </div>
               <div>
-                <label className="block text-xs text-[var(--color-text-muted)] mb-1">Example dialogue</label>
+                <label className="block text-xs text-[var(--color-text-muted)] mb-1">{t("rp.mesExample")}</label>
                 <textarea
                   value={form.mesExample}
                   onChange={(e) => setForm((f) => ({ ...f, mesExample: e.target.value }))}
@@ -371,23 +373,23 @@ export default function RoleplayHub() {
                 />
               </div>
               <div>
-                <label className="block text-xs text-[var(--color-text-muted)] mb-1">System prompt (optional)</label>
+                <label className="block text-xs text-[var(--color-text-muted)] mb-1">{t("rp.systemPrompt")}</label>
                 <textarea
                   value={form.systemPrompt}
                   onChange={(e) => setForm((f) => ({ ...f, systemPrompt: e.target.value }))}
-                  placeholder="Extra instructions for the model…"
+                  placeholder={t("rp.systemPrompt.ph")}
                   rows={2}
                   className="w-full bg-[var(--color-bg-input)] border border-[var(--color-border)] rounded-lg px-3 py-2 text-sm resize-none focus:outline-none focus:border-[var(--color-accent)]"
                 />
               </div>
               <div>
-                <label className="block text-xs text-[var(--color-text-muted)] mb-1">World book (lore)</label>
+                <label className="block text-xs text-[var(--color-text-muted)] mb-1">{t("rp.worldBook")}</label>
                 <select
                   value={form.worldBookId || ""}
                   onChange={(e) => setForm((f) => ({ ...f, worldBookId: e.target.value || null }))}
                   className="w-full bg-[var(--color-bg-input)] border border-[var(--color-border)] rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-[var(--color-accent)]"
                 >
-                  <option value="">None</option>
+                  <option value="">{t("rp.worldBook.none")}</option>
                   {books.map((b) => (
                     <option key={b.id} value={b.id}>
                       {b.name}
@@ -395,7 +397,7 @@ export default function RoleplayHub() {
                   ))}
                 </select>
                 <p className="text-[10px] text-[var(--color-text-muted)] mt-1">
-                  Lore entries activate when their keywords appear in the conversation.
+                  {t("rp.worldBook.hint")}
                 </p>
               </div>
             </div>
@@ -404,13 +406,13 @@ export default function RoleplayHub() {
                 onClick={saveCard}
                 className="flex-1 px-4 py-2.5 rounded-lg bg-[var(--color-accent)] text-white text-sm font-medium hover:bg-[var(--color-accent-glow)] transition-colors"
               >
-                Save character
+                {t("rp.save")}
               </button>
               <button
                 onClick={() => setEditing(false)}
                 className="px-4 py-2.5 rounded-lg border border-[var(--color-border)] text-sm text-[var(--color-text-secondary)] hover:bg-[var(--color-bg-hover)] transition-colors"
               >
-                Cancel
+                {t("rp.cancel")}
               </button>
             </div>
           </div>
@@ -422,9 +424,9 @@ export default function RoleplayHub() {
             <div className="w-14 h-14 rounded-2xl bg-[var(--color-teal-muted)] flex items-center justify-center">
               <Sparkles size={24} className="text-[var(--color-teal)]" />
             </div>
-            <p className="text-sm text-[var(--color-text-muted)]">No characters yet.</p>
+            <p className="text-sm text-[var(--color-text-muted)]">{t("rp.noCards.title")}</p>
             <p className="text-xs text-[var(--color-text-muted)]">
-              Create your first companion with the button above.
+              {t("rp.noCards.hint")}
             </p>
           </div>
         ) : (
@@ -440,10 +442,10 @@ export default function RoleplayHub() {
                     <p className="text-[11px] text-[var(--color-text-muted)] truncate">
                       {card.worldBookId ? (
                         <span className="inline-flex items-center gap-1 text-[var(--color-teal)]">
-                          <BookOpen size={10} /> world book attached
+                          <BookOpen size={10} /> {t("rp.worldBookAttached")}
                         </span>
                       ) : (
-                        "no world book"
+                        t("rp.noWorldBook")
                       )}
                     </p>
                   </div>
@@ -456,14 +458,14 @@ export default function RoleplayHub() {
                   </button>
                 </div>
                 <p className="text-xs text-[var(--color-text-secondary)] line-clamp-2 flex-1 mb-3">
-                  {card.description || "No description."}
+                  {card.description || t("rp.empty")}
                 </p>
                 <button
                   onClick={() => openChat(card)}
                   className="w-full flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg bg-[var(--color-teal-muted)] text-[var(--color-teal)] text-xs font-medium hover:bg-[var(--color-teal)] hover:text-[var(--color-bg-deep)] transition-colors"
                 >
                   <KeyRound size={12} />
-                  Talk to {card.name}
+                  {t("rp.talkTo", { name: card.name })}
                 </button>
               </div>
             ))}

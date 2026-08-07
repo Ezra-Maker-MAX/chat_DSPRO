@@ -1,11 +1,12 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { useI18n } from "@/lib/i18n";
 import { Settings, Cpu, Plus, Trash2, Loader2, Check, X, Key, Globe, Bot, BookOpen } from "lucide-react";
 import BotSettings from "@/components/settings/BotSettings";
 import WorldBooksManager from "@/components/settings/WorldBooksManager";
 
-interface LLMProvider {
+interface LLM{t("settings.form.provider")} {
   id: string;
   name: string;
   provider: string;
@@ -15,34 +16,35 @@ interface LLMProvider {
 }
 
 export default function SettingsPage() {
-  const [providers, setProviders] = useState<LLMProvider[]>([]);
+  const { t } = useI18n();
+  const [providers, set{t("settings.form.provider")}s] = useState<LLM{t("settings.form.provider")}[]>([]);
   const [loading, setLoading] = useState(true);
   const [showAdd, setShowAdd] = useState(false);
   const [error, setError] = useState("");
 
   // Form state
   const [formName, setFormName] = useState("");
-  const [formProvider, setFormProvider] = useState("openai");
+  const [form{t("settings.form.provider")}, setForm{t("settings.form.provider")}] = useState("openai");
   const [formModel, setFormModel] = useState("");
   const [formApiKey, setFormApiKey] = useState("");
   const [formBaseUrl, setFormBaseUrl] = useState("");
   const [saving, setSaving] = useState(false);
 
-  const fetchProviders = async () => {
+  const fetch{t("settings.form.provider")}s = async () => {
     const res = await fetch("/api/llm/providers");
     const data = await res.json();
-    setProviders(data.providers || []);
+    set{t("settings.form.provider")}s(data.providers || []);
     setLoading(false);
   };
 
   useEffect(() => {
-    fetchProviders();
+    fetch{t("settings.form.provider")}s();
   }, []);
 
   const handleAdd = async () => {
     setError("");
     if (!formName || !formModel || !formApiKey) {
-      setError("Name, model, and API key are required");
+      setError(t("settings.error.required"));
       return;
     }
 
@@ -53,7 +55,7 @@ export default function SettingsPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           name: formName,
-          provider: formProvider,
+          provider: form{t("settings.form.provider")},
           model: formModel,
           apiKey: formApiKey,
           baseUrl: formBaseUrl || undefined,
@@ -65,22 +67,21 @@ export default function SettingsPage() {
       } else {
         setShowAdd(false);
         resetForm();
-        await fetchProviders();
+        await fetch{t("settings.form.provider")}s();
       }
     } catch {
-      setError("Failed to add provider");
-    }
-    setSaving(false);
+      setError(t("settings.error.add"));
+    }    setSaving(false);
   };
 
   const handleDelete = async (id: string) => {
     await fetch(`/api/llm/providers?id=${id}`, { method: "DELETE" });
-    await fetchProviders();
+    await fetch{t("settings.form.provider")}s();
   };
 
   const resetForm = () => {
     setFormName("");
-    setFormProvider("openai");
+    setForm{t("settings.form.provider")}("openai");
     setFormModel("");
     setFormApiKey("");
     setFormBaseUrl("");
@@ -111,24 +112,24 @@ export default function SettingsPage() {
               <Settings size={20} className="text-[var(--color-accent-glow)]" />
             </div>
             <h1 className="font-[family-name:var(--font-display)] font-bold text-2xl">
-              Space Settings
+              {t("settings.title")}
             </h1>
           </div>
         </div>
 
-        {/* LLM Providers */}
+        {/* {t("settings.llm")} */}
         <section>
           <div className="flex items-center justify-between mb-4">
             <div className="flex items-center gap-2">
               <Cpu size={16} className="text-[var(--color-accent)]" />
-              <h2 className="font-semibold text-sm">LLM Providers</h2>
+              <h2 className="font-semibold text-sm">{t("settings.llm")}</h2>
             </div>
             <button
               onClick={() => setShowAdd(!showAdd)}
               className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[var(--color-accent-muted)] text-[var(--color-accent-glow)] text-xs font-medium hover:bg-[var(--color-accent)]/20 transition-colors"
             >
               <Plus size={12} />
-              Add Provider
+              {t("settings.add{t("settings.form.provider")}")}
             </button>
           </div>
 
@@ -138,22 +139,22 @@ export default function SettingsPage() {
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <label className="block text-[10px] font-medium text-[var(--color-text-muted)] uppercase mb-1">
-                    Display Name
+                    {t("settings.form.name")}
                   </label>
                   <input
                     value={formName}
                     onChange={(e) => setFormName(e.target.value)}
-                    placeholder="e.g., GPT-4o Main"
+                    placeholder="{t("settings.form.name.ph")}"
                     className="w-full bg-[var(--color-bg-input)] border border-[var(--color-border)] rounded-lg px-3 py-2 text-xs text-[var(--color-text-primary)] focus:outline-none focus:border-[var(--color-accent)]"
                   />
                 </div>
                 <div>
                   <label className="block text-[10px] font-medium text-[var(--color-text-muted)] uppercase mb-1">
-                    Provider
+                    {t("settings.form.provider")}
                   </label>
                   <select
-                    value={formProvider}
-                    onChange={(e) => setFormProvider(e.target.value)}
+                    value={form{t("settings.form.provider")}}
+                    onChange={(e) => setForm{t("settings.form.provider")}(e.target.value)}
                     className="w-full bg-[var(--color-bg-input)] border border-[var(--color-border)] rounded-lg px-3 py-2 text-xs text-[var(--color-text-primary)] focus:outline-none focus:border-[var(--color-accent)]"
                   >
                     <option value="openai">OpenAI</option>
@@ -166,19 +167,19 @@ export default function SettingsPage() {
 
               <div>
                 <label className="block text-[10px] font-medium text-[var(--color-text-muted)] uppercase mb-1">
-                  Model ID
+                  {t("settings.form.model")}
                 </label>
                 <input
                   value={formModel}
                   onChange={(e) => setFormModel(e.target.value)}
-                  placeholder="e.g., gpt-4o, claude-sonnet-4-20250514"
+                  placeholder="{t("settings.form.model.ph")}"
                   className="w-full bg-[var(--color-bg-input)] border border-[var(--color-border)] rounded-lg px-3 py-2 text-xs text-[var(--color-text-primary)] font-mono focus:outline-none focus:border-[var(--color-accent)]"
                 />
               </div>
 
               <div>
                 <label className="block text-[10px] font-medium text-[var(--color-text-muted)] uppercase mb-1">
-                  API Key
+                  {t("settings.form.apiKey")}
                 </label>
                 <input
                   type="password"
@@ -191,12 +192,12 @@ export default function SettingsPage() {
 
               <div>
                 <label className="block text-[10px] font-medium text-[var(--color-text-muted)] uppercase mb-1">
-                  Base URL (optional)
+                  {t("settings.form.baseUrl")}
                 </label>
                 <input
                   value={formBaseUrl}
                   onChange={(e) => setFormBaseUrl(e.target.value)}
-                  placeholder="Custom endpoint URL"
+                  placeholder="{t("settings.form.baseUrl.ph")}"
                   className="w-full bg-[var(--color-bg-input)] border border-[var(--color-border)] rounded-lg px-3 py-2 text-xs text-[var(--color-text-primary)] focus:outline-none focus:border-[var(--color-accent)]"
                 />
               </div>
@@ -214,27 +215,27 @@ export default function SettingsPage() {
                   className="flex items-center gap-1.5 px-4 py-2 rounded-lg bg-[var(--color-accent)] text-white text-xs font-medium hover:bg-[var(--color-accent-glow)] transition-colors"
                 >
                   {saving ? <Loader2 size={12} className="animate-spin" /> : <Check size={12} />}
-                  Save
+                  {t("settings.save")}
                 </button>
                 <button
                   onClick={() => { setShowAdd(false); resetForm(); }}
                   className="px-4 py-2 rounded-lg text-xs text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)] transition-colors"
                 >
-                  Cancel
+                  {t("settings.cancel")}
                 </button>
               </div>
             </div>
           )}
 
-          {/* Provider list */}
+          {/* {t("settings.form.provider")} list */}
           {providers.length === 0 ? (
             <div className="glass-card p-8 text-center">
               <Key size={24} className="mx-auto mb-3 text-[var(--color-text-muted)]" />
               <p className="text-sm text-[var(--color-text-muted)]">
-                No LLM providers configured yet.
+                {t("settings.empty.title")}
               </p>
               <p className="text-xs text-[var(--color-text-muted)] mt-1">
-                Add providers to enable AI features in your space.
+                {t("settings.empty.hint")}
               </p>
             </div>
           ) : (
@@ -283,20 +284,17 @@ export default function SettingsPage() {
 
         {/* How to use section */}
         <section className="mt-8 p-4 glass-card">
-          <h3 className="font-semibold text-sm mb-2">How LLM Routing Works</h3>
+          <h3 className="font-semibold text-sm mb-2">{t("settings.routing.title")}</h3>
           <p className="text-xs text-[var(--color-text-secondary)] leading-relaxed">
-            Messages in your space are automatically routed through configured LLM providers.
-            The gateway selects the best model based on routing rules (priority + prompt matching).
-            Set up multiple providers for fallback and load balancing.
-            API keys are stored securely and never exposed to clients.
+            {t("settings.routing.desc")}
           </p>
         </section>
 
-        {/* Bot & AI Gateway */}
+        {/* {t("settings.bot")} */}
         <section className="mt-8">
           <div className="flex items-center gap-2 mb-4">
             <Bot size={16} className="text-[var(--color-teal)]" />
-            <h2 className="font-semibold text-sm">Bot & AI Gateway</h2>
+            <h2 className="font-semibold text-sm">{t("settings.bot")}</h2>
           </div>
           <BotSettings />
         </section>
@@ -305,7 +303,7 @@ export default function SettingsPage() {
         <section className="mt-8">
           <div className="flex items-center gap-2 mb-4">
             <BookOpen size={16} className="text-[var(--color-accent-glow)]" />
-            <h2 className="font-semibold text-sm">World Books (lore)</h2>
+            <h2 className="font-semibold text-sm">{t("wb.title")}</h2>
           </div>
           <WorldBooksManager />
         </section>

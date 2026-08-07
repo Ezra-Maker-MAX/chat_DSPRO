@@ -3,6 +3,8 @@
 import { useState, useEffect, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import ParticleBackground from "@/components/layout/ParticleBackground";
+import LanguageSwitcher from "@/components/layout/LanguageSwitcher";
+import { useI18n } from "@/lib/i18n";
 import { ArrowLeft, Sparkles, Loader2 } from "lucide-react";
 import Link from "next/link";
 
@@ -23,6 +25,7 @@ export default function JoinPage() {
 function JoinForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
+  const { t } = useI18n();
   const [inviteCode, setInviteCode] = useState("");
   const [nickname, setNickname] = useState("");
   const [error, setError] = useState("");
@@ -49,12 +52,12 @@ function JoinForm() {
     setError("");
 
     if (!inviteCode.trim() || !nickname.trim()) {
-      setError("Both fields are required");
+      setError(t("join.error.both"));
       return;
     }
 
     if (nickname.length < 2 || nickname.length > 20) {
-      setError("Nickname must be 2-20 characters");
+      setError(t("join.error.nickname"));
       return;
     }
 
@@ -75,7 +78,7 @@ function JoinForm() {
 
       router.push(`/${data.tenant.slug}`);
     } catch {
-      setError("Connection failed. Please try again.");
+      setError(t("join.error.network"));
       setLoading(false);
     }
   };
@@ -84,6 +87,11 @@ function JoinForm() {
     <main className="relative min-h-screen flex flex-col items-center justify-center overflow-hidden">
       <ParticleBackground accentColor="267, 75%, 65%" particleCount={30} />
 
+      {/* Language switcher */}
+      <div className="absolute top-4 right-4 z-20 w-40">
+        <LanguageSwitcher />
+      </div>
+
       <div className="relative z-10 w-full max-w-md px-6">
         {/* Back */}
         <Link
@@ -91,7 +99,7 @@ function JoinForm() {
           className="inline-flex items-center gap-1.5 text-sm text-[var(--color-text-muted)] hover:text-[var(--color-text-secondary)] mb-8 transition-colors"
         >
           <ArrowLeft size={16} />
-          Back
+          {t("join.back")}
         </Link>
 
         {/* Card */}
@@ -101,7 +109,7 @@ function JoinForm() {
               <Sparkles size={18} className="text-[var(--color-accent-glow)]" />
             </div>
             <h1 className="font-[family-name:var(--font-display)] font-bold text-xl">
-              Join a Space
+              {t("join.title")}
             </h1>
           </div>
 
@@ -109,13 +117,13 @@ function JoinForm() {
             {/* Invite code */}
             <div>
               <label className="block text-xs font-medium text-[var(--color-text-secondary)] mb-1.5 uppercase tracking-wider">
-                Invite Code
+                {t("join.invite.label")}
               </label>
               <input
                 type="text"
                 value={inviteCode}
                 onChange={(e) => setInviteCode(formatCode(e.target.value))}
-                placeholder="XXXX-XXXX-XXXX"
+                placeholder={t("join.invite.placeholder")}
                 maxLength={14}
                 className="w-full bg-[var(--color-bg-input)] border border-[var(--color-border)] rounded-xl px-4 py-3 text-sm font-mono tracking-[0.3em] text-center text-[var(--color-text-primary)] placeholder:text-[var(--color-text-muted)] focus:outline-none focus:border-[var(--color-accent)] transition-colors"
                 autoFocus
@@ -125,18 +133,18 @@ function JoinForm() {
             {/* Nickname */}
             <div>
               <label className="block text-xs font-medium text-[var(--color-text-secondary)] mb-1.5 uppercase tracking-wider">
-                Your Nickname
+                {t("join.nickname.label")}
               </label>
               <input
                 type="text"
                 value={nickname}
                 onChange={(e) => setNickname(e.target.value)}
-                placeholder="Choose an alias..."
+                placeholder={t("join.nickname.placeholder")}
                 maxLength={20}
                 className="w-full bg-[var(--color-bg-input)] border border-[var(--color-border)] rounded-xl px-4 py-3 text-sm text-[var(--color-text-primary)] placeholder:text-[var(--color-text-muted)] focus:outline-none focus:border-[var(--color-accent)] transition-colors"
               />
               <p className="text-[10px] text-[var(--color-text-muted)] mt-1.5">
-                This is how others will see you in the space.
+                {t("join.nickname.hint")}
               </p>
             </div>
 
@@ -156,16 +164,16 @@ function JoinForm() {
               {loading ? (
                 <>
                   <Loader2 size={16} className="animate-spin" />
-                  Joining...
+                  {t("join.submitting")}
                 </>
               ) : (
-                "Enter Space"
+                t("join.submit")
               )}
             </button>
           </form>
 
           <p className="text-xs text-[var(--color-text-muted)] mt-6 text-center">
-            Don&apos;t have an invite code? Ask the space admin.
+            {t("join.noCode")}
           </p>
         </div>
       </div>

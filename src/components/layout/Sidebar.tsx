@@ -14,6 +14,8 @@ import {
 } from "lucide-react";
 import InviteModal from "./InviteModal";
 import NewSpaceModal from "./NewSpaceModal";
+import LanguageSwitcher from "./LanguageSwitcher";
+import { useI18n } from "@/lib/i18n";
 
 interface Channel {
   id: string;
@@ -45,6 +47,7 @@ export default function Sidebar({
 }: SidebarProps) {
   const router = useRouter();
   const pathname = usePathname();
+  const { t } = useI18n();
   const [isLoggingOut, setIsLoggingOut] = useState(false);
   const [showInvite, setShowInvite] = useState(false);
   const [showNewSpace, setShowNewSpace] = useState(false);
@@ -78,7 +81,7 @@ export default function Sidebar({
         <div className="flex items-center gap-1.5 mt-1">
           <div className="w-2 h-2 rounded-full bg-[var(--color-teal)]" />
           <span className="text-xs text-[var(--color-text-muted)]">
-            {onlineCount} online
+            {t("sidebar.online", { count: onlineCount })}
           </span>
         </div>
       </div>
@@ -87,7 +90,7 @@ export default function Sidebar({
       <div className="flex-1 overflow-y-auto px-3 py-3">
         <div className="flex items-center justify-between px-2 mb-2">
           <span className="text-xs font-medium uppercase tracking-wider text-[var(--color-text-muted)]">
-            Channels
+            {t("sidebar.channels")}
           </span>
           {userRole === "admin" && (
             <button className="p-1 rounded-md hover:bg-[var(--color-bg-hover)] transition-colors text-[var(--color-text-muted)] hover:text-[var(--color-text-secondary)]">
@@ -131,7 +134,7 @@ export default function Sidebar({
             className="flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm transition-all duration-150 w-full text-left text-[var(--color-text-secondary)] hover:bg-[var(--color-bg-hover)] hover:text-[var(--color-accent-glow)]"
           >
             <UserPlus size={16} />
-            Invite friends
+            {t("sidebar.invite")}
           </button>
         )}
 
@@ -140,7 +143,7 @@ export default function Sidebar({
           className="flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm transition-all duration-150 w-full text-left text-[var(--color-text-secondary)] hover:bg-[var(--color-bg-hover)] hover:text-[var(--color-teal)]"
         >
           <Sparkles size={16} />
-          New space
+          {t("sidebar.newSpace")}
         </button>
 
         <Link
@@ -156,7 +159,7 @@ export default function Sidebar({
           `}
         >
           <Gamepad2 size={16} />
-          Game Plaza
+          {t("sidebar.games")}
         </Link>
 
         {userRole === "admin" && (
@@ -173,7 +176,7 @@ export default function Sidebar({
             `}
           >
             <Settings size={16} />
-            Settings
+            {t("sidebar.settings")}
           </Link>
         )}
 
@@ -183,8 +186,13 @@ export default function Sidebar({
           className="flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm transition-all duration-150 w-full text-left text-[var(--color-text-muted)] hover:bg-[var(--color-bg-hover)] hover:text-[var(--color-danger)]"
         >
           <LogOut size={16} />
-          {isLoggingOut ? "Leaving..." : "Leave Space"}
+          {isLoggingOut ? t("sidebar.leaving") : t("sidebar.leave")}
         </button>
+
+        {/* Language switcher */}
+        <div className="pt-1 border-t border-[var(--color-border)]">
+          <LanguageSwitcher />
+        </div>
       </div>
 
       {showInvite && <InviteModal onClose={() => setShowInvite(false)} />}

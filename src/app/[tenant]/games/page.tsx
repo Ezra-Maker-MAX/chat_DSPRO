@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { useParams } from "next/navigation";
+import { useI18n } from "@/lib/i18n";
 import { Gamepad2, Download, Trash2, Loader2, Puzzle, Wrench, Brain, Heart, ExternalLink, Bot } from "lucide-react";
 import RoleplayHub from "@/components/roleplay/RoleplayHub";
 
@@ -39,6 +40,7 @@ const categoryColors: Record<string, string> = {
 
 export default function GamesPage() {
   const { tenant } = useParams();
+  const { t } = useI18n();
   const [tab, setTab] = useState<"marketplace" | "characters">("marketplace");
   const [marketplace, setMarketplace] = useState<Plugin[]>([]);
   const [installed, setInstalled] = useState<InstalledPlugin[]>([]);
@@ -76,7 +78,7 @@ export default function GamesPage() {
         await fetchPlugins();
       }
     } catch {
-      setError("Installation failed");
+      setError(t("games.error.install"));
     }
     setInstalling(null);
   };
@@ -88,7 +90,7 @@ export default function GamesPage() {
       const data = await res.json();
       if (data.success) await fetchPlugins();
     } catch {
-      setError("Uninstall failed");
+      setError(t("games.error.uninstall"));
     }
   };
 
@@ -113,14 +115,14 @@ export default function GamesPage() {
             className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)]"
           >
             <Puzzle size={12} />
-            Plugins
+            {t("games.tab.plugins")}
           </button>
           <button
             onClick={() => setTab("characters")}
             className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium bg-[var(--color-teal-muted)] text-[var(--color-teal)]"
           >
             <Bot size={12} />
-            Characters
+            {t("games.tab.characters")}
           </button>
         </div>
         <div className="flex-1 overflow-hidden mt-3">
@@ -144,7 +146,7 @@ export default function GamesPage() {
             </h1>
           </div>
           <p className="text-sm text-[var(--color-text-secondary)]">
-            Install MCP plugins to add games, utilities, and AI tools to your space.
+            {t("games.subtitle")}
           </p>
 
           {/* Tab switch */}
@@ -153,7 +155,7 @@ export default function GamesPage() {
             className="mt-4 inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-[var(--color-teal-muted)] text-[var(--color-teal)] text-sm font-medium hover:bg-[var(--color-teal)] hover:text-[var(--color-bg-deep)] transition-colors"
           >
             <Bot size={16} />
-            Try Characters (roleplay)
+            {t("games.tryCharacters")}
           </button>
         </div>
 
@@ -168,7 +170,7 @@ export default function GamesPage() {
         {installed.length > 0 && (
           <div className="mb-8">
             <h2 className="text-xs font-medium text-[var(--color-text-muted)] uppercase tracking-wider mb-3">
-              Installed ({installed.length})
+              {t("games.installed", { count: installed.length })}
             </h2>
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
               {installed.map((p) => (
@@ -213,7 +215,7 @@ export default function GamesPage() {
 
         {/* Marketplace */}
         <h2 className="text-xs font-medium text-[var(--color-text-muted)] uppercase tracking-wider mb-3">
-          Marketplace
+          {t("games.marketplace")}
         </h2>
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
           {marketplace.map((p) => {
@@ -251,7 +253,7 @@ export default function GamesPage() {
                 {!p.endpoint && !installed && (
                   <input
                     type="text"
-                    placeholder="MCP endpoint URL..."
+                    placeholder={t("games.endpoint.placeholder")}
                     value={endpointInput[p.id] || ""}
                     onChange={(e) =>
                       setEndpointInput((prev) => ({ ...prev, [p.id]: e.target.value }))
@@ -264,7 +266,7 @@ export default function GamesPage() {
                 {installed ? (
                   <div className="flex items-center gap-2 text-xs text-[var(--color-teal)]">
                     <div className="w-1.5 h-1.5 rounded-full bg-[var(--color-teal)]" />
-                    Installed
+                    {t("games.installedLabel")}
                   </div>
                 ) : (
                   <button
@@ -277,7 +279,7 @@ export default function GamesPage() {
                     ) : (
                       <Download size={12} />
                     )}
-                    {installing === p.id ? "Installing..." : "Install"}
+                    {installing === p.id ? t("games.installing") : t("games.install")}
                   </button>
                 )}
               </div>

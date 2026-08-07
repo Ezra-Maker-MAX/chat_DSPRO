@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useCallback } from "react";
+import { useI18n } from "@/lib/i18n";
 import { X, Copy, Check, RefreshCw, Link2, UserPlus } from "lucide-react";
 
 interface InviteModalProps {
@@ -8,6 +9,7 @@ interface InviteModalProps {
 }
 
 export default function InviteModal({ onClose }: InviteModalProps) {
+  const { t } = useI18n();
   const [code, setCode] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -27,16 +29,16 @@ export default function InviteModal({ onClose }: InviteModalProps) {
       });
       const data = await res.json();
       if (!res.ok) {
-        setError(data.error || "Failed to generate invite");
+        setError(data.error || t("invite.error.gen"));
         return;
       }
       setCode(data.invite.code);
     } catch {
-      setError("Network error — please try again");
+      setError(t("invite.error.network"));
     } finally {
       setLoading(false);
     }
-  }, [singleUse, maxUses]);
+  }, [singleUse, maxUses, t]);
 
   const copy = async () => {
     if (!code) return;
@@ -87,10 +89,10 @@ export default function InviteModal({ onClose }: InviteModalProps) {
               </div>
               <div>
                 <h2 className="font-[family-name:var(--font-display)] font-bold text-lg text-[var(--color-text-primary)]">
-                  Invite friends
+                  {t("invite.title")}
                 </h2>
                 <p className="text-xs text-[var(--color-text-muted)]">
-                  Share a code — new invites let people join this space
+                  {t("invite.subtitle")}
                 </p>
               </div>
             </div>
@@ -113,8 +115,8 @@ export default function InviteModal({ onClose }: InviteModalProps) {
                   : "border-[var(--color-border)] text-[var(--color-text-secondary)] hover:bg-[var(--color-bg-hover)]"
               }`}
             >
-              <div className="font-medium">Unlimited</div>
-              <div className="text-[11px] opacity-80">Many friends</div>
+              <div className="font-medium">{t("invite.unlimited")}</div>
+              <div className="text-[11px] opacity-80">{t("invite.unlimited.desc")}</div>
             </button>
             <button
               onClick={() => setSingleUse(true)}
@@ -124,8 +126,8 @@ export default function InviteModal({ onClose }: InviteModalProps) {
                   : "border-[var(--color-border)] text-[var(--color-text-secondary)] hover:bg-[var(--color-bg-hover)]"
               }`}
             >
-              <div className="font-medium">One-time</div>
-              <div className="text-[11px] opacity-80">Single use</div>
+              <div className="font-medium">{t("invite.onetime")}</div>
+              <div className="text-[11px] opacity-80">{t("invite.onetime.desc")}</div>
             </button>
           </div>
 
@@ -141,7 +143,7 @@ export default function InviteModal({ onClose }: InviteModalProps) {
               ) : (
                 <Link2 size={16} />
               )}
-              {loading ? "Generating..." : "Generate invite code"}
+              {loading ? t("invite.generating") : t("invite.generate")}
             </button>
           ) : (
             <div className="space-y-3">
@@ -159,12 +161,12 @@ export default function InviteModal({ onClose }: InviteModalProps) {
                   {copied ? (
                     <>
                       <Check size={14} className="text-[var(--color-success)]" />
-                      <span className="text-[var(--color-success)]">Copied</span>
+                      <span className="text-[var(--color-success)]">{t("invite.copied")}</span>
                     </>
                   ) : (
                     <>
                       <Copy size={14} />
-                      Copy
+                      {t("invite.copy")}
                     </>
                   )}
                 </button>
@@ -184,10 +186,10 @@ export default function InviteModal({ onClose }: InviteModalProps) {
                 >
                   <span className="flex items-center gap-2 text-xs text-[var(--color-text-muted)]">
                     <Link2 size={14} className="shrink-0" />
-                    <span className="truncate">Copy join link</span>
+                    <span className="truncate">{t("invite.joinLink")}</span>
                   </span>
                   <span className="text-[var(--color-accent-glow)] text-xs shrink-0">
-                    {copied ? "Copied" : "Copy"}
+                    {copied ? t("invite.copied") : t("invite.copy")}
                   </span>
                 </button>
               )}
@@ -199,13 +201,13 @@ export default function InviteModal({ onClose }: InviteModalProps) {
                   className="flex-1 flex items-center justify-center gap-1.5 px-4 py-2.5 rounded-xl border border-[var(--color-border)] text-sm text-[var(--color-text-secondary)] hover:bg-[var(--color-bg-hover)] transition-colors"
                 >
                   <RefreshCw size={14} />
-                  New code
+                  {t("invite.newCode")}
                 </button>
                 <button
                   onClick={onClose}
                   className="flex-1 px-4 py-2.5 rounded-xl font-medium text-sm text-white bg-gradient-to-r from-[var(--color-accent)] to-[var(--color-accent-glow)] hover:opacity-90 transition-opacity"
                 >
-                  Done
+                  {t("invite.done")}
                 </button>
               </div>
             </div>
@@ -216,8 +218,7 @@ export default function InviteModal({ onClose }: InviteModalProps) {
           )}
 
           <p className="mt-4 text-[11px] text-[var(--color-text-muted)] text-center leading-relaxed">
-            Anyone with this code joins <span className="text-[var(--color-text-secondary)]">the same anonymous space</span>.
-            Codes never expire unless you choose one-time.
+            {t("invite.note")}
           </p>
         </div>
       </div>

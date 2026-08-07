@@ -4,6 +4,8 @@ import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import ParticleBackground from "@/components/layout/ParticleBackground";
+import LanguageSwitcher from "@/components/layout/LanguageSwitcher";
+import { useI18n } from "@/lib/i18n";
 import { ArrowRight, Sparkles, Users, Shield, Gamepad2, Cpu } from "lucide-react";
 
 interface Session {
@@ -14,8 +16,9 @@ interface Session {
 
 export default function LandingClient({ session }: { session: Session | null }) {
   const router = useRouter();
+  const { t } = useI18n();
   const [typedText, setTypedText] = useState("");
-  const fullText = "anonymous spaces that matter";
+  const fullText = t("landing.tagline");
 
   useEffect(() => {
     if (session?.channelId) {
@@ -29,6 +32,7 @@ export default function LandingClient({ session }: { session: Session | null }) 
   }, [session, router]);
 
   useEffect(() => {
+    setTypedText("");
     let i = 0;
     const interval = setInterval(() => {
       if (i <= fullText.length) {
@@ -39,7 +43,7 @@ export default function LandingClient({ session }: { session: Session | null }) 
       }
     }, 60);
     return () => clearInterval(interval);
-  }, []);
+  }, [fullText]);
 
   if (session?.tenantSlug) {
     return (
@@ -52,6 +56,13 @@ export default function LandingClient({ session }: { session: Session | null }) 
   return (
     <main className="relative min-h-screen flex flex-col items-center justify-center overflow-hidden">
       <ParticleBackground accentColor="267, 75%, 65%" particleCount={50} />
+
+      {/* Language switcher */}
+      <div className="absolute top-4 right-4 z-20">
+        <div className="w-40">
+          <LanguageSwitcher />
+        </div>
+      </div>
 
       {/* Hero */}
       <div className="relative z-10 text-center px-6 max-w-2xl mx-auto">
@@ -79,8 +90,7 @@ export default function LandingClient({ session }: { session: Session | null }) 
         </p>
 
         <p className="text-sm text-[var(--color-text-muted)] mb-10 max-w-md mx-auto">
-          Private, invite-only chat spaces with media sharing, built-in games, and multi-model AI.
-          No tracking. No sharing. Just conversation.
+          {t("landing.subtitle")}
         </p>
 
         {/* CTA */}
@@ -88,17 +98,17 @@ export default function LandingClient({ session }: { session: Session | null }) 
           href="/join"
           className="inline-flex items-center gap-2 px-8 py-3.5 rounded-xl font-medium text-white bg-[var(--color-accent)] hover:bg-[var(--color-accent-glow)] hover:shadow-[0_0_30px_rgba(108,92,231,0.3)] transition-all duration-300 font-[family-name:var(--font-display)]"
         >
-          Enter with invite code
+          {t("landing.cta")}
           <ArrowRight size={18} />
         </Link>
 
         {/* Feature capsules */}
         <div className="mt-16 flex flex-wrap justify-center gap-3">
           {[
-            { icon: Users, label: "Multi-tenant" },
-            { icon: Shield, label: "Invite-only" },
-            { icon: Gamepad2, label: "Game Plaza" },
-            { icon: Cpu, label: "Multi-Model AI" },
+            { icon: Users, label: t("landing.feature.multi") },
+            { icon: Shield, label: t("landing.feature.invite") },
+            { icon: Gamepad2, label: t("landing.feature.games") },
+            { icon: Cpu, label: t("landing.feature.ai") },
           ].map(({ icon: Icon, label }) => (
             <div
               key={label}
@@ -113,7 +123,7 @@ export default function LandingClient({ session }: { session: Session | null }) 
 
       {/* Footer */}
       <div className="absolute bottom-6 text-xs text-[var(--color-text-muted)]">
-        Built for Vercel + Turso · Open source
+        {t("landing.footer")}
       </div>
     </main>
   );

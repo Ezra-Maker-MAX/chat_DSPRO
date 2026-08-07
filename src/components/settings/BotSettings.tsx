@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { useI18n } from "@/lib/i18n";
 import { Bot, Save, Loader2, Check, Image } from "lucide-react";
 
 interface BotProfile {
@@ -17,6 +18,7 @@ interface BotProfile {
 }
 
 export default function BotSettings() {
+  const { t } = useI18n();
   const [profile, setProfile] = useState<BotProfile | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -49,9 +51,9 @@ export default function BotSettings() {
           setImageCooldownMs(p.imageCooldownMs ?? 180000);
         }
       })
-      .catch(() => setError("Failed to load bot settings"))
+      .catch(() => setError(t("bot.error.load")))
       .finally(() => setLoading(false));
-  }, []);
+  }, [t]);
 
   const save = async () => {
     setSaving(true);
@@ -76,7 +78,7 @@ export default function BotSettings() {
       });
       const data = await res.json();
       if (!res.ok) {
-        setError(data.error || "Failed to save");
+        setError(data.error || t("bot.error.network"));
         return;
       }
       setProfile(data.profile);
@@ -84,7 +86,7 @@ export default function BotSettings() {
       setSaved(true);
       setTimeout(() => setSaved(false), 2000);
     } catch {
-      setError("Network error — please try again");
+      setError(t("bot.error.network"));
     } finally {
       setSaving(false);
     }
@@ -110,12 +112,12 @@ export default function BotSettings() {
       <div className="glass-card p-4 space-y-3">
         <div className="flex items-center gap-2">
           <Bot size={16} className="text-[var(--color-teal)]" />
-          <h3 className="font-semibold text-sm">Bot identity</h3>
+          <h3 className="font-semibold text-sm">{t("bot.identity")}</h3>
         </div>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           <div>
             <label className="block text-[10px] font-medium text-[var(--color-text-muted)] uppercase mb-1">
-              Bot name
+              {t("bot.name")}
             </label>
             <input
               value={name}
@@ -131,20 +133,20 @@ export default function BotSettings() {
                 onChange={(e) => setIsEnabled(e.target.checked)}
                 className="accent-[var(--color-teal)]"
               />
-              Bot enabled in this space
+              {t("bot.enabled")}
             </label>
           </div>
         </div>
         <div>
           <label className="block text-[10px] font-medium text-[var(--color-text-muted)] uppercase mb-1">
-            System prompt
+            {t("bot.systemPrompt")}
           </label>
           <textarea
             value={systemPrompt}
             onChange={(e) => setSystemPrompt(e.target.value)}
             rows={3}
             className="w-full bg-[var(--color-bg-input)] border border-[var(--color-border)] rounded-lg px-3 py-2 text-xs resize-none focus:outline-none focus:border-[var(--color-accent)]"
-            placeholder="How the bot should behave in chat…"
+            placeholder={t("bot.systemPrompt.ph")}
           />
         </div>
       </div>
@@ -154,11 +156,11 @@ export default function BotSettings() {
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
             <Image size={16} className="text-[var(--color-accent-glow)]" />
-            <h3 className="font-semibold text-sm">Image gateway (/imagine)</h3>
+            <h3 className="font-semibold text-sm">{t("bot.imageGateway")}</h3>
           </div>
           {profile?.imageConfigured && (
             <span className="text-[10px] px-2 py-0.5 rounded-full bg-[var(--color-teal-muted)] text-[var(--color-teal)]">
-              configured
+              {t("bot.configured")}
             </span>
           )}
         </div>
@@ -166,7 +168,7 @@ export default function BotSettings() {
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           <div>
             <label className="block text-[10px] font-medium text-[var(--color-text-muted)] uppercase mb-1">
-              Provider
+              {t("bot.provider")}
             </label>
             <select
               value={imageProvider}
@@ -179,7 +181,7 @@ export default function BotSettings() {
           </div>
           <div>
             <label className="block text-[10px] font-medium text-[var(--color-text-muted)] uppercase mb-1">
-              Model
+              {t("bot.model")}
             </label>
             <input
               value={imageModel}
@@ -192,13 +194,13 @@ export default function BotSettings() {
 
         <div>
           <label className="block text-[10px] font-medium text-[var(--color-text-muted)] uppercase mb-1">
-            API key {profile?.imageConfigured && "(leave blank to keep existing)"}
+            {t("bot.apiKey", { suffix: profile?.imageConfigured ? t("bot.apiKey.keep") : "" })}
           </label>
           <input
             type="password"
             value={imageApiKey}
             onChange={(e) => setImageApiKey(e.target.value)}
-            placeholder={profile?.imageConfigured ? "•••••••• (configured)" : "sk-..."}
+            placeholder={profile?.imageConfigured ? "•••••••• (configured)" : t("bot.apiKey.ph")}
             className="w-full bg-[var(--color-bg-input)] border border-[var(--color-border)] rounded-lg px-3 py-2 text-xs font-mono focus:outline-none focus:border-[var(--color-accent)]"
           />
         </div>
@@ -206,18 +208,18 @@ export default function BotSettings() {
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           <div>
             <label className="block text-[10px] font-medium text-[var(--color-text-muted)] uppercase mb-1">
-              Base URL (optional)
+              {t("bot.baseUrl")}
             </label>
             <input
               value={imageBaseUrl}
               onChange={(e) => setImageBaseUrl(e.target.value)}
-              placeholder="https://api.openai.com/v1"
+              placeholder={t("bot.baseUrl.ph")}
               className="w-full bg-[var(--color-bg-input)] border border-[var(--color-border)] rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-[var(--color-accent)]"
             />
           </div>
           <div>
             <label className="block text-[10px] font-medium text-[var(--color-text-muted)] uppercase mb-1">
-              Cooldown (seconds)
+              {t("bot.cooldown")}
             </label>
             <input
               type="number"
@@ -231,8 +233,7 @@ export default function BotSettings() {
         </div>
 
         <p className="text-[10px] text-[var(--color-text-muted)] leading-relaxed">
-          Multi-user requests are queued automatically. Each completed image updates the
-          cooldown; users behind in queue wait their turn.
+          {t("bot.cooldown.hint")}
         </p>
       </div>
 
@@ -249,11 +250,11 @@ export default function BotSettings() {
           ) : (
             <Save size={12} />
           )}
-          {saving ? "Saving..." : saved ? "Saved" : "Save bot settings"}
+          {saving ? t("bot.saving") : saved ? t("bot.saved") : t("bot.save")}
         </button>
         {profile?.lastImageAt && (
           <span className="text-[10px] text-[var(--color-text-muted)]">
-            Last image: {new Date(profile.lastImageAt).toLocaleTimeString()}
+            {t("bot.lastImage", { time: new Date(profile.lastImageAt).toLocaleTimeString() })}
           </span>
         )}
       </div>

@@ -2,7 +2,6 @@
 
 import { formatTime } from "@/lib/utils";
 import { useState } from "react";
-
 interface Media {
   id: string;
   storageUrl: string;

@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { useI18n } from "@/lib/i18n";
 import { X, Plus, Loader2 } from "lucide-react";
 
 interface NewSpaceModalProps {
@@ -10,6 +11,7 @@ interface NewSpaceModalProps {
 
 export default function NewSpaceModal({ onClose }: NewSpaceModalProps) {
   const router = useRouter();
+  const { t } = useI18n();
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
   const [loading, setLoading] = useState(false);
@@ -17,7 +19,7 @@ export default function NewSpaceModal({ onClose }: NewSpaceModalProps) {
 
   const create = async () => {
     if (name.trim().length < 2) {
-      setError("Give your space a name (2-40 characters)");
+      setError(t("space.error.name"));
       return;
     }
     setLoading(true);
@@ -30,13 +32,13 @@ export default function NewSpaceModal({ onClose }: NewSpaceModalProps) {
       });
       const data = await res.json();
       if (!res.ok) {
-        setError(data.error || "Failed to create space");
+        setError(data.error || t("space.error.network"));
         return;
       }
       // Redirect into the new space (the tenant page auto-redirects to default channel)
       router.push(`/${data.tenant.slug}`);
     } catch {
-      setError("Network error — please try again");
+      setError(t("space.error.network"));
     } finally {
       setLoading(false);
     }
@@ -64,10 +66,10 @@ export default function NewSpaceModal({ onClose }: NewSpaceModalProps) {
               </div>
               <div>
                 <h2 className="font-[family-name:var(--font-display)] font-bold text-lg text-[var(--color-text-primary)]">
-                  Create a new space
+                  {t("space.title")}
                 </h2>
                 <p className="text-xs text-[var(--color-text-muted)]">
-                  A private, anonymous room with its own invite code
+                  {t("space.subtitle")}
                 </p>
               </div>
             </div>
@@ -83,7 +85,7 @@ export default function NewSpaceModal({ onClose }: NewSpaceModalProps) {
           <div className="space-y-4">
             <div>
               <label className="block text-xs font-medium text-[var(--color-text-secondary)] mb-1.5">
-                Space name
+                {t("space.name.label")}
               </label>
               <input
                 autoFocus
@@ -91,20 +93,20 @@ export default function NewSpaceModal({ onClose }: NewSpaceModalProps) {
                 onChange={(e) => setName(e.target.value)}
                 onKeyDown={(e) => e.key === "Enter" && create()}
                 maxLength={40}
-                placeholder="e.g. Weekend Squad"
+                placeholder={t("space.name.placeholder")}
                 className="w-full px-3.5 py-2.5 rounded-xl border border-[var(--color-border)] bg-[var(--color-bg-input)] text-sm text-[var(--color-text-primary)] placeholder:text-[var(--color-text-muted)] focus:border-[var(--color-accent)] focus:outline-none transition-colors"
               />
             </div>
 
             <div>
               <label className="block text-xs font-medium text-[var(--color-text-secondary)] mb-1.5">
-                Description <span className="text-[var(--color-text-muted)]">(optional)</span>
+                {t("space.desc.label")}
               </label>
               <input
                 value={description}
                 onChange={(e) => setDescription(e.target.value)}
                 maxLength={120}
-                placeholder="What is this space for?"
+                placeholder={t("space.desc.placeholder")}
                 className="w-full px-3.5 py-2.5 rounded-xl border border-[var(--color-border)] bg-[var(--color-bg-input)] text-sm text-[var(--color-text-primary)] placeholder:text-[var(--color-text-muted)] focus:border-[var(--color-accent)] focus:outline-none transition-colors"
               />
             </div>
@@ -119,12 +121,12 @@ export default function NewSpaceModal({ onClose }: NewSpaceModalProps) {
               {loading ? (
                 <>
                   <Loader2 size={16} className="animate-spin" />
-                  Creating...
+                  {t("space.creating")}
                 </>
               ) : (
                 <>
                   <Plus size={16} />
-                  Create space
+                  {t("space.create")}
                 </>
               )}
             </button>

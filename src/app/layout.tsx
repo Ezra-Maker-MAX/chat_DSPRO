@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import "./globals.css";
+import { I18nProvider } from "@/lib/i18n";
 
 export const metadata: Metadata = {
   title: "Chatmosphere — anonymous spaces that matter",
@@ -14,7 +15,7 @@ export default function RootLayout({
   return (
     <html lang="en" className="h-full antialiased" suppressHydrationWarning>
       <body className="min-h-full flex flex-col bg-[var(--color-bg-deep)] text-[var(--color-text-primary)]">
-        {children}
+        <I18nProvider>{children}</I18nProvider>
       </body>
     </html>
   );

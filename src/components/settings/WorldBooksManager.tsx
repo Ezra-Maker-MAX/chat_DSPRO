@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { useI18n } from "@/lib/i18n";
 import { BookOpen, Plus, Trash2, Loader2, KeyRound, X, Save } from "lucide-react";
 
 interface WorldBook {
@@ -20,6 +21,7 @@ interface Entry {
 }
 
 export default function WorldBooksManager() {
+  const { t } = useI18n();
   const [books, setBooks] = useState<WorldBook[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -45,7 +47,7 @@ export default function WorldBooksManager() {
       const data = await res.json();
       setBooks(data.books || []);
     } catch {
-      setError("Failed to load world books");
+      setError(t("wb.error.load"));
     } finally {
       setLoading(false);
     }
@@ -53,6 +55,7 @@ export default function WorldBooksManager() {
 
   useEffect(() => {
     fetchBooks();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const openBook = async (id: string) => {
@@ -63,7 +66,7 @@ export default function WorldBooksManager() {
       const data = await res.json();
       setEntries(data.entries || []);
     } catch {
-      setError("Failed to load book");
+      setError(t("wb.error.load"));
     } finally {
       setBookLoading(false);
     }
@@ -85,14 +88,14 @@ export default function WorldBooksManager() {
         await fetchBooks();
       }
     } catch {
-      setError("Failed to create book");
+      setError(t("wb.error.create"));
     } finally {
       setCreating(false);
     }
   };
 
   const deleteBook = async (id: string) => {
-    if (!confirm("Delete this world book and all its entries?")) return;
+    if (!confirm(t("wb.delete.confirm"))) return;
     try {
       await fetch(`/api/worldbooks?id=${id}`, { method: "DELETE" });
       if (activeBookId === id) {
@@ -101,7 +104,7 @@ export default function WorldBooksManager() {
       }
       await fetchBooks();
     } catch {
-      setError("Failed to delete book");
+      setError(t("wb.error.delete"));
     }
   };
 
@@ -125,7 +128,7 @@ export default function WorldBooksManager() {
         await openBook(activeBookId);
       }
     } catch {
-      setError("Failed to add entry");
+      setError(t("wb.error.add"));
     }
   };
 
@@ -135,7 +138,7 @@ export default function WorldBooksManager() {
       await fetch(`/api/worldbooks/${activeBookId}?entryId=${entryId}`, { method: "DELETE" });
       await openBook(activeBookId);
     } catch {
-      setError("Failed to delete entry");
+      setError(t("wb.error.deleteEntry"));
     }
   };
 
@@ -159,19 +162,19 @@ export default function WorldBooksManager() {
       <div className="glass-card p-4 space-y-3">
         <div className="flex items-center gap-2">
           <BookOpen size={16} className="text-[var(--color-accent-glow)]" />
-          <h3 className="font-semibold text-sm">Create world book</h3>
+          <h3 className="font-semibold text-sm">{t("wb.create")}</h3>
         </div>
         <div className="flex flex-col sm:flex-row gap-2">
           <input
             value={newBookName}
             onChange={(e) => setNewBookName(e.target.value)}
-            placeholder="Book name (e.g. 'Aetherian Empire Lore')"
+            placeholder={t("wb.name.ph")}
             className="flex-1 bg-[var(--color-bg-input)] border border-[var(--color-border)] rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-[var(--color-accent)]"
           />
           <input
             value={newBookDesc}
             onChange={(e) => setNewBookDesc(e.target.value)}
-            placeholder="Description (optional)"
+            placeholder={t("wb.desc.ph")}
             className="flex-1 bg-[var(--color-bg-input)] border border-[var(--color-border)] rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-[var(--color-accent)]"
           />
           <button
@@ -180,7 +183,7 @@ export default function WorldBooksManager() {
             className="flex items-center justify-center gap-1.5 px-4 py-2 rounded-lg bg-[var(--color-accent)] text-white text-xs font-medium hover:bg-[var(--color-accent-glow)] transition-colors disabled:opacity-40"
           >
             {creating ? <Loader2 size={12} className="animate-spin" /> : <Plus size={12} />}
-            Create
+            {t("wb.createBtn")}
           </button>
         </div>
       </div>
@@ -190,8 +193,7 @@ export default function WorldBooksManager() {
         <div className="glass-card p-6 text-center">
           <BookOpen size={20} className="mx-auto mb-2 text-[var(--color-text-muted)]" />
           <p className="text-xs text-[var(--color-text-muted)]">
-            No world books yet. Books hold lore entries that inject background knowledge
-            when keywords appear in roleplay.
+            {t("wb.empty.title")} {t("wb.empty.hint")}
           </p>
         </div>
       ) : (
@@ -237,7 +239,7 @@ export default function WorldBooksManager() {
                       <div className="space-y-2 mb-3">
                         {entries.length === 0 && (
                           <p className="text-[11px] text-[var(--color-text-muted)] py-2">
-                            No entries yet. Add lore with keywords below.
+                            {t("wb.noEntries")}
                           </p>
                         )}
                         {entries.map((e) => {
@@ -255,7 +257,7 @@ export default function WorldBooksManager() {
                                     </span>
                                   ))}
                                   <span className="text-[9px] text-[var(--color-text-muted)]">
-                                    priority {e.priority} · {e.position}
+                                    {t("wb.priority", { p: e.priority })} · {e.position}
                                   </span>
                                 </div>
                                 <p className="text-[11px] text-[var(--color-text-secondary)] line-clamp-2">
@@ -278,13 +280,13 @@ export default function WorldBooksManager() {
                         <input
                           value={entryKeys}
                           onChange={(e) => setEntryKeys(e.target.value)}
-                          placeholder="Trigger keywords, comma-separated (e.g. aether, empire, mage)"
+                          placeholder={t("wb.keys.ph")}
                           className="w-full bg-[var(--color-bg-input)] border border-[var(--color-border)] rounded-lg px-3 py-2 text-xs font-mono focus:outline-none focus:border-[var(--color-accent)]"
                         />
                         <textarea
                           value={entryContent}
                           onChange={(e) => setEntryContent(e.target.value)}
-                          placeholder="Lore content injected when keywords appear…"
+                          placeholder={t("wb.content.ph")}
                           rows={2}
                           className="w-full bg-[var(--color-bg-input)] border border-[var(--color-border)] rounded-lg px-3 py-2 text-xs resize-none focus:outline-none focus:border-[var(--color-accent)]"
                         />
@@ -303,8 +305,8 @@ export default function WorldBooksManager() {
                             onChange={(e) => setEntryPosition(e.target.value)}
                             className="bg-[var(--color-bg-input)] border border-[var(--color-border)] rounded-lg px-2 py-1.5 text-xs focus:outline-none"
                           >
-                            <option value="before_char">Before character</option>
-                            <option value="after_char">After character</option>
+                            <option value="before_char">{t("wb.before")}</option>
+                            <option value="after_char">{t("wb.after")}</option>
                           </select>
                           <button
                             onClick={addEntry}
@@ -312,7 +314,7 @@ export default function WorldBooksManager() {
                             className="ml-auto flex items-center gap-1 px-3 py-1.5 rounded-lg bg-[var(--color-teal-muted)] text-[var(--color-teal)] text-[11px] font-medium hover:bg-[var(--color-teal)] hover:text-[var(--color-bg-deep)] transition-colors disabled:opacity-40"
                           >
                             <Save size={11} />
-                            Add entry
+                            {t("wb.addEntry")}
                           </button>
                         </div>
                       </div>

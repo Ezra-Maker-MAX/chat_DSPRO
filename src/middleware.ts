@@ -6,7 +6,7 @@ const JWT_SECRET = new TextEncoder().encode(
   process.env.JWT_SECRET || "chatmosphere-dev-secret-change-in-production-32chars"
 );
 
-const PUBLIC_PATHS = ["/", "/join", "/api/auth/join"];
+const PUBLIC_PATHS = ["/", "/join", "/login", "/api/auth/join", "/api/auth/login"];
 
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;

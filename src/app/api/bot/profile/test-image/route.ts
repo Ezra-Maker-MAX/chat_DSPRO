@@ -103,15 +103,24 @@ function defaultBaseUrl(provider: string): string {
 }
 
 function buildImageBody(provider: string, model: string, size: string): unknown {
-  // Use minimal token/output params so this costs as little as possible.
-  // Most providers ignore n on image endpoints; we send n=1 to be explicit.
-  return {
+  // Build a minimal body that works across providers.
+  // Many non-OpenAI proxies (Agnes, LiteLLM-forwarded models) reject
+  // response_format / size / n.  We send only what's safe for a
+  // connectivity ping.
+  const body: Record<string, unknown> = {
     model,
     prompt: "a single solid color square",
-    n: 1,
-    size,
-    response_format: "b64_json",
   };
+
+  // Only add OpenAI-specific params when we're reasonably sure the
+  // endpoint accepts them (native OpenAI or known-compatible proxy).
+  if (provider === "openai") {
+    body.n = 1;
+    body.size = size;
+    body.response_format = "b64_json";
+  }
+
+  return body;
 }
 
 function extractErrorMessage(text: string): string | null {

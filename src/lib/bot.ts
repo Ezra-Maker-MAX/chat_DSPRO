@@ -116,6 +116,17 @@ export async function generateImage(
 
   const baseUrl = (profile.imageBaseUrl || "https://api.openai.com/v1").replace(/\/+$/, "");
   const model = profile.imageModel || "gpt-image-1";
+  const provider = profile.imageProvider || "openai";
+
+  // Build a body that the target gateway accepts.
+  // Non-OpenAI proxies (Agnes, LiteLLM-forwarded t2i models) reject
+  // response_format / size / n — keep those only for native OpenAI.
+  const body: Record<string, unknown> = { model, prompt };
+  if (provider === "openai") {
+    body.n = 1;
+    body.size = "1024x1024";
+    body.response_format = "b64_json";
+  }
 
   const res = await fetch(`${baseUrl}/images/generations`, {
     method: "POST",
@@ -123,13 +134,7 @@ export async function generateImage(
       "Content-Type": "application/json",
       Authorization: `Bearer ${profile.imageApiKey}`,
     },
-    body: JSON.stringify({
-      model,
-      prompt,
-      n: 1,
-      size: "1024x1024",
-      response_format: "b64_json",
-    }),
+    body: JSON.stringify(body),
   });
 
   if (!res.ok) {
@@ -138,9 +143,22 @@ export async function generateImage(
   }
 
   const data = await res.json();
-  const b64 = data?.data?.[0]?.b64_json;
-  if (!b64) {
-    throw new Error("Image API returned no data (b64_json missing). Some models return a URL — check gateway config.");
+  // OpenAI-compatible endpoints return b64_json; some proxies (Agnes, etc.)
+  // return a URL directly. Support both.
+  const item = data?.data?.[0];
+  const b64 = item?.b64_json;
+  const url = item?.url;
+  if (!b64 && !url) {
+    throw new Error("Image API returned no data (no b64_json or url). Check gateway config.");
+  }
+
+  // If the gateway returned a direct URL, skip re-upload and return it.
+  if (url) {
+    return {
+      url,
+      mimeType: "image/png",
+      fileName: `bot-${generateId(16)}.png`,
+    };
   }
 
   const buffer = Buffer.from(b64, "base64");

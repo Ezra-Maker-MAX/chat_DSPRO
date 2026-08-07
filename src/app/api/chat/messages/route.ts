@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getSession } from "@/lib/auth";
 import { db, schema } from "@/lib/db";
-import { eq, and, desc } from "drizzle-orm";
+import { eq, and, desc, asc, gt } from "drizzle-orm";
 import { generateId } from "@/lib/utils";
 
 // GET: fetch messages for a channel
@@ -14,6 +14,7 @@ export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url);
   const channelId = searchParams.get("channelId");
   const before = searchParams.get("before"); // cursor-based pagination
+  const since = searchParams.get("since"); // message id — return only NEWER messages
   const limit = Math.min(parseInt(searchParams.get("limit") || "50"), 100);
 
   if (!channelId) {
@@ -65,6 +66,50 @@ export async function GET(req: NextRequest) {
         eq(schema.messages.channelId, channelId)
       )
     );
+  }
+
+  // `since=<id>` — fetch only messages newer than the given one. Works
+  // cross-process on serverless: the poll client passes its latest known
+  // message id and gets back any messages written since (e.g. by a bot
+  // handler that landed on a different serverless instance than the SSE
+  // subscriber, since in-memory SSE pub-sub doesn't scale beyond one process).
+  if (since) {
+    const [anchor] = await db
+      .select({ createdAt: schema.messages.createdAt })
+      .from(schema.messages)
+      .where(
+        and(
+          eq(schema.messages.id, since),
+          eq(schema.messages.tenantId, session.tenantId)
+        )
+      )
+      .limit(1);
+    if (anchor) {
+      query = db
+        .select({
+          id: schema.messages.id,
+          content: schema.messages.content,
+          type: schema.messages.type,
+          createdAt: schema.messages.createdAt,
+          userId: schema.messages.userId,
+          nickname: schema.users.nickname,
+          avatarSeed: schema.users.avatarSeed,
+        })
+        .from(schema.messages)
+        .leftJoin(schema.users, eq(schema.messages.userId, schema.users.id))
+        .where(
+          and(
+            eq(schema.messages.tenantId, session.tenantId),
+            eq(schema.messages.channelId, channelId),
+            gt(schema.messages.createdAt, anchor.createdAt)
+          )
+        )
+        .orderBy(asc(schema.messages.createdAt)) // ascending for `since` polling
+        .limit(limit);
+    } else {
+      // Anchor not found (e.g. very old id) — return empty to avoid a flood
+      return NextResponse.json({ messages: [], hasMore: false });
+    }
   }
 
   const messages = await query;

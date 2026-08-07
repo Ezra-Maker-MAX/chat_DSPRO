@@ -38,6 +38,12 @@ export default function ChatArea({
   const { t } = useI18n();
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
+  // Mirror of `messages` so the polling interval can read the latest id
+  // without re-creating itself every time messages changes.
+  const messagesRef = useRef<Message[]>([]);
+  useEffect(() => {
+    messagesRef.current = messages;
+  }, [messages]);
 
   // Fetch initial messages
   useEffect(() => {
@@ -52,7 +58,8 @@ export default function ChatArea({
       .finally(() => setLoading(false));
   }, [channelId]);
 
-  // SSE subscription for real-time
+  // SSE subscription for real-time (works only when the SSE connection and the
+  // bot happen to land on the same serverless instance — see src/lib/sse.ts).
   useEffect(() => {
     if (!channelId) return;
 
@@ -67,7 +74,9 @@ export default function ChatArea({
       try {
         const data = JSON.parse(e.data);
         if (data.type === "new_message") {
-          setMessages((prev) => [...prev, data.message]);
+          setMessages((prev) =>
+            prev.some((m) => m.id === data.message.id) ? prev : [...prev, data.message]
+          );
         }
       } catch {}
     });
@@ -78,6 +87,51 @@ export default function ChatArea({
 
     return () => {
       eventSource.close();
+    };
+  }, [channelId]);
+
+  // Polling fallback — fixes the cross-serverless-instance problem where the
+  // SSE pub-sub is in-memory and the bot reply never reaches the client.
+  // Polls every 4s when the tab is visible; dedupes by message id so it
+  // coexists safely with SSE (whichever delivers first wins).
+  useEffect(() => {
+    if (!channelId) return;
+
+    let timer: ReturnType<typeof setInterval> | null = null;
+    let cancelled = false;
+
+    const tick = async () => {
+      if (cancelled) return;
+      if (document.hidden) return; // pause when tab is hidden
+      const latestId = messagesRef.current[messagesRef.current.length - 1]?.id;
+      if (!latestId) return;
+      try {
+        const r = await fetch(
+          `/api/chat/messages?channelId=${channelId}&since=${encodeURIComponent(latestId)}&limit=50`
+        );
+        if (!r.ok) return;
+        const data = await r.json();
+        const newOnes: Message[] = data.messages || [];
+        if (newOnes.length === 0) return;
+        setMessages((prev) => {
+          const seen = new Set(prev.map((m) => m.id));
+          const merged = [...prev];
+          for (const m of newOnes) if (!seen.has(m.id)) merged.push(m);
+          return merged;
+        });
+      } catch {
+        /* ignore transient network errors */
+      }
+    };
+
+    timer = setInterval(tick, 4000);
+    // Also tick immediately on mount to recover from any missed messages
+    const startTimer = setTimeout(tick, 500);
+
+    return () => {
+      cancelled = true;
+      if (timer) clearInterval(timer);
+      if (startTimer) clearTimeout(startTimer);
     };
   }, [channelId]);
 

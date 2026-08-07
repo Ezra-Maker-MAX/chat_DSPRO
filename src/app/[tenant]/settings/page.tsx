@@ -8,6 +8,7 @@ import WorldBooksManager from "@/components/settings/WorldBooksManager";
 import AccountPanel from "@/components/settings/AccountPanel";
 import MembersManager from "@/components/settings/MembersManager";
 import RecoveryPanel from "@/components/settings/RecoveryPanel";
+import GatewayPanel from "@/components/settings/GatewayPanel";
 import { useLayout } from "@/components/layout/LayoutContext";
 
 interface LLM {
@@ -167,71 +168,37 @@ export default function SettingsPage() {
           {/* Add form */}
           {showAdd && (
             <div className="glass-card p-4 mb-4 animate-slide-up space-y-3">
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="block text-[10px] font-medium text-[var(--color-text-muted)] uppercase mb-1">
-                    {t("settings.form.name")}
-                  </label>
-                  <input
-                    value={formName}
-                    onChange={(e) => setFormName(e.target.value)}
-                    placeholder={t("settings.form.name.ph")}
-                    className="w-full bg-[var(--color-bg-input)] border border-[var(--color-border)] rounded-lg px-3 py-2 text-xs text-[var(--color-text-primary)] focus:outline-none focus:border-[var(--color-accent)]"
-                  />
-                </div>
-                <div>
-                  <label className="block text-[10px] font-medium text-[var(--color-text-muted)] uppercase mb-1">
-                    {t("settings.form.provider")}
-                  </label>
-                  <select
-                    value={formProvider}
-                    onChange={(e) => setFormProvider(e.target.value)}
-                    className="w-full bg-[var(--color-bg-input)] border border-[var(--color-border)] rounded-lg px-3 py-2 text-xs text-[var(--color-text-primary)] focus:outline-none focus:border-[var(--color-accent)]"
-                  >
-                    <option value="openai">OpenAI</option>
-                    <option value="anthropic">Anthropic</option>
-                    <option value="deepseek">DeepSeek</option>
-                    <option value="google">Google AI</option>
-                  </select>
-                </div>
-              </div>
-
               <div>
                 <label className="block text-[10px] font-medium text-[var(--color-text-muted)] uppercase mb-1">
-                  {t("settings.form.model")}
+                  {t("settings.form.name")}
                 </label>
                 <input
-                  value={formModel}
-                  onChange={(e) => setFormModel(e.target.value)}
-                  placeholder={t("settings.form.model.ph")}
-                  className="w-full bg-[var(--color-bg-input)] border border-[var(--color-border)] rounded-lg px-3 py-2 text-xs text-[var(--color-text-primary)] font-mono focus:outline-none focus:border-[var(--color-accent)]"
-                />
-              </div>
-
-              <div>
-                <label className="block text-[10px] font-medium text-[var(--color-text-muted)] uppercase mb-1">
-                  {t("settings.form.apiKey")}
-                </label>
-                <input
-                  type="password"
-                  value={formApiKey}
-                  onChange={(e) => setFormApiKey(e.target.value)}
-                  placeholder={t("settings.form.apiKey.ph")}
-                  className="w-full bg-[var(--color-bg-input)] border border-[var(--color-border)] rounded-lg px-3 py-2 text-xs text-[var(--color-text-primary)] font-mono focus:outline-none focus:border-[var(--color-accent)]"
-                />
-              </div>
-
-              <div>
-                <label className="block text-[10px] font-medium text-[var(--color-text-muted)] uppercase mb-1">
-                  {t("settings.form.baseUrl")}
-                </label>
-                <input
-                  value={formBaseUrl}
-                  onChange={(e) => setFormBaseUrl(e.target.value)}
-                  placeholder={t("settings.form.baseUrl.ph")}
+                  value={formName}
+                  onChange={(e) => setFormName(e.target.value)}
+                  placeholder={t("settings.form.name.ph")}
                   className="w-full bg-[var(--color-bg-input)] border border-[var(--color-border)] rounded-lg px-3 py-2 text-xs text-[var(--color-text-primary)] focus:outline-none focus:border-[var(--color-accent)]"
                 />
               </div>
+
+              <GatewayPanel
+                provider={formProvider}
+                setProvider={setFormProvider}
+                apiKey={formApiKey}
+                setApiKey={setFormApiKey}
+                baseUrl={formBaseUrl}
+                setBaseUrl={setFormBaseUrl}
+                model={formModel}
+                setModel={setFormModel}
+                modelsPath="/api/llm/providers/models"
+                testPath="/api/llm/providers/test"
+                providers={[
+                  { value: "openai", label: "OpenAI" },
+                  { value: "anthropic", label: "Anthropic" },
+                  { value: "deepseek", label: "DeepSeek" },
+                  { value: "google", label: "Google AI" },
+                  { value: "custom", label: "Custom endpoint" },
+                ]}
+              />
 
               {error && (
                 <div className="p-2 rounded-lg bg-[var(--color-danger)]/10 border border-[var(--color-danger)]/20 text-xs text-[var(--color-danger)]">

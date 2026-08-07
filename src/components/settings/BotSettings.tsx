@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { useI18n } from "@/lib/i18n";
 import { Bot, Save, Loader2, Check, Image } from "lucide-react";
+import GatewayPanel from "./GatewayPanel";
 
 interface BotProfile {
   id: string;
@@ -165,58 +166,24 @@ export default function BotSettings() {
           )}
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-          <div>
-            <label className="block text-[10px] font-medium text-[var(--color-text-muted)] uppercase mb-1">
-              {t("bot.provider")}
-            </label>
-            <select
-              value={imageProvider}
-              onChange={(e) => setImageProvider(e.target.value)}
-              className="w-full bg-[var(--color-bg-input)] border border-[var(--color-border)] rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-[var(--color-accent)]"
-            >
-              <option value="openai">OpenAI (images API)</option>
-              <option value="custom">Custom endpoint</option>
-            </select>
-          </div>
-          <div>
-            <label className="block text-[10px] font-medium text-[var(--color-text-muted)] uppercase mb-1">
-              {t("bot.model")}
-            </label>
-            <input
-              value={imageModel}
-              onChange={(e) => setImageModel(e.target.value)}
-              placeholder="gpt-image-1 / dall-e-3"
-              className="w-full bg-[var(--color-bg-input)] border border-[var(--color-border)] rounded-lg px-3 py-2 text-xs font-mono focus:outline-none focus:border-[var(--color-accent)]"
-            />
-          </div>
-        </div>
+        <GatewayPanel
+          provider={imageProvider}
+          setProvider={setImageProvider}
+          apiKey={imageApiKey}
+          setApiKey={setImageApiKey}
+          baseUrl={imageBaseUrl}
+          setBaseUrl={setImageBaseUrl}
+          model={imageModel}
+          setModel={setImageModel}
+          modelsPath="/api/bot/profile/image-models"
+          testPath="/api/bot/profile/test-image"
+          providers={[
+            { value: "openai", label: "OpenAI (images API)" },
+            { value: "custom", label: "Custom endpoint" },
+          ]}
+        />
 
-        <div>
-          <label className="block text-[10px] font-medium text-[var(--color-text-muted)] uppercase mb-1">
-            {t("bot.apiKey", { suffix: profile?.imageConfigured ? t("bot.apiKey.keep") : "" })}
-          </label>
-          <input
-            type="password"
-            value={imageApiKey}
-            onChange={(e) => setImageApiKey(e.target.value)}
-            placeholder={profile?.imageConfigured ? "•••••••• (configured)" : t("bot.apiKey.ph")}
-            className="w-full bg-[var(--color-bg-input)] border border-[var(--color-border)] rounded-lg px-3 py-2 text-xs font-mono focus:outline-none focus:border-[var(--color-accent)]"
-          />
-        </div>
-
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-          <div>
-            <label className="block text-[10px] font-medium text-[var(--color-text-muted)] uppercase mb-1">
-              {t("bot.baseUrl")}
-            </label>
-            <input
-              value={imageBaseUrl}
-              onChange={(e) => setImageBaseUrl(e.target.value)}
-              placeholder={t("bot.baseUrl.ph")}
-              className="w-full bg-[var(--color-bg-input)] border border-[var(--color-border)] rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-[var(--color-accent)]"
-            />
-          </div>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1 border-t border-[var(--color-border)]">
           <div>
             <label className="block text-[10px] font-medium text-[var(--color-text-muted)] uppercase mb-1">
               {t("bot.cooldown")}
@@ -229,6 +196,13 @@ export default function BotSettings() {
               onChange={(e) => setImageCooldownMs(Number(e.target.value) * 1000)}
               className="w-full bg-[var(--color-bg-input)] border border-[var(--color-border)] rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-[var(--color-accent)]"
             />
+          </div>
+          <div className="flex items-end pb-1">
+            {profile?.lastImageAt && (
+              <span className="text-[10px] text-[var(--color-text-muted)]">
+                {t("bot.lastImage", { time: new Date(profile.lastImageAt).toLocaleTimeString() })}
+              </span>
+            )}
           </div>
         </div>
 

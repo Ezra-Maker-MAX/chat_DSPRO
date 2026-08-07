@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, Suspense } from "react";
+import { useState, useEffect, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import ParticleBackground from "@/components/layout/ParticleBackground";
 import LanguageSwitcher from "@/components/layout/LanguageSwitcher";
@@ -31,6 +31,24 @@ function LoginForm() {
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+  const [lastSpace, setLastSpace] = useState<{ slug: string; name: string } | null>(null);
+
+  // Pre-fill slug from localStorage (remembered on last successful join)
+  useEffect(() => {
+    if (searchParams.get("space")) return; // explicit ?space= wins
+    try {
+      const raw = localStorage.getItem("ch_last_space");
+      if (raw) {
+        const parsed = JSON.parse(raw);
+        if (parsed?.slug) {
+          setTenantSlug(parsed.slug);
+          setLastSpace({ slug: parsed.slug, name: parsed.name || parsed.slug });
+        }
+      }
+    } catch {
+      /* ignore */
+    }
+  }, [searchParams]);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -58,6 +76,16 @@ function LoginForm() {
         setError(data.error);
         setLoading(false);
         return;
+      }
+
+      // Remember this space for next time
+      try {
+        localStorage.setItem(
+          "ch_last_space",
+          JSON.stringify({ slug: data.tenant.slug, name: data.tenant.name })
+        );
+      } catch {
+        /* ignore */
       }
 
       router.push(`/${data.tenant.slug}`);
@@ -102,6 +130,19 @@ function LoginForm() {
           </p>
 
           <form onSubmit={handleLogin} className="space-y-4">
+            {/* Last-space reminder (helps returning users find their slug) */}
+            {lastSpace && !tenantSlug.startsWith(lastSpace.slug) && (
+              <button
+                type="button"
+                onClick={() => setTenantSlug(lastSpace.slug)}
+                className="w-full text-left p-3 rounded-lg bg-[var(--color-accent-muted)]/40 border border-[var(--color-accent)]/20 text-xs text-[var(--color-text-secondary)] hover:bg-[var(--color-accent-muted)]/70 transition-colors"
+              >
+                <span className="text-[var(--color-text-muted)]">{t("login.lastSpacePrefix")}</span>{" "}
+                <span className="font-medium text-[var(--color-text-primary)]">{lastSpace.name}</span>{" "}
+                <span className="font-mono text-[var(--color-accent-glow)]">({lastSpace.slug})</span>
+              </button>
+            )}
+
             {/* Space slug */}
             <div>
               <label className="block text-xs font-medium text-[var(--color-text-secondary)] mb-1.5 uppercase tracking-wider">

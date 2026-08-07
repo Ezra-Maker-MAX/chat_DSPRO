@@ -76,6 +76,16 @@ function JoinForm() {
         return;
       }
 
+      // Remember this space so the login page can pre-fill it next time
+      try {
+        localStorage.setItem(
+          "ch_last_space",
+          JSON.stringify({ slug: data.tenant.slug, name: data.tenant.name })
+        );
+      } catch {
+        /* localStorage unavailable (e.g. private mode), ignore */
+      }
+
       router.push(`/${data.tenant.slug}`);
     } catch {
       setError(t("join.error.network"));

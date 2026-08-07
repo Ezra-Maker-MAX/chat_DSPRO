@@ -31,6 +31,22 @@ export const users = sqliteTable("users", {
   uniqueIndex("user_tenant_nickname").on(table.tenantId, table.nickname),
 ]);
 
+// ============== Invite Codes ==============
+export const inviteCodes = sqliteTable("invite_codes", {
+  id: text("id").primaryKey(),
+  tenantId: text("tenant_id").notNull().references(() => tenants.id),
+  code: text("code").notNull().unique(), // uppercase XX-XXXX-XXXX
+  createdBy: text("created_by").references(() => users.id), // admin who generated
+  singleUse: integer("single_use", { mode: "boolean" }).default(false), // burn after first use
+  usedCount: integer("used_count").default(0),
+  maxUses: integer("max_uses"), // null = unlimited
+  expiresAt: text("expires_at"), // ISO, null = never expires
+  isActive: integer("is_active", { mode: "boolean" }).default(true),
+  createdAt: text("created_at").default(sql`(datetime('now'))`),
+}, (table) => [
+  uniqueIndex("invite_tenant_code").on(table.tenantId, table.code),
+]);
+
 // ============== Channels ==============
 export const channels = sqliteTable("channels", {
   id: text("id").primaryKey(),

@@ -33,6 +33,7 @@ export default function TenantLayoutClient({
   channels,
   onlineCount,
   userId,
+  nickname,
   userRole,
   children,
 }: Props) {

@@ -100,7 +100,7 @@ export default function SettingsPage() {
   };
 
   return (
-    <div className="h-screen overflow-y-auto p-6">
+    <div className="h-dvh overflow-y-auto p-4 sm:p-6 pt-16 md:pt-6">
       <div className="max-w-2xl mx-auto">
         {/* Header */}
         <div className="mb-8">

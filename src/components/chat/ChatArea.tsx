@@ -127,10 +127,10 @@ export default function ChatArea({
   );
 
   return (
-    <div className="flex-1 flex flex-col h-screen">
+    <div className="flex-1 flex flex-col h-dvh">
       {/* Channel header */}
       <div className="h-[var(--topbar-h)] border-b border-[var(--color-border)] flex items-center px-5 bg-[var(--color-bg-base)] shrink-0">
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 md:ml-0 ml-12">
           <span className="text-lg text-[var(--color-text-muted)]">#</span>
           <h2 className="font-[family-name:var(--font-display)] font-semibold text-base">
             {channelName}

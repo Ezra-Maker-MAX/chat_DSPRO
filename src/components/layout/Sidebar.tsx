@@ -29,6 +29,8 @@ interface SidebarProps {
   onlineCount: number;
   currentChannelId?: string;
   userRole: string;
+  open?: boolean;
+  onClose?: () => void;
 }
 
 export default function Sidebar({
@@ -38,6 +40,8 @@ export default function Sidebar({
   onlineCount,
   currentChannelId,
   userRole,
+  open = false,
+  onClose,
 }: SidebarProps) {
   const router = useRouter();
   const pathname = usePathname();
@@ -54,7 +58,11 @@ export default function Sidebar({
   const isActive = (channelId: string) => channelId === currentChannelId;
 
   return (
-    <aside className="w-[var(--sidebar-w)] h-screen flex flex-col border-r border-[var(--color-border)] bg-[var(--color-bg-base)] shrink-0">
+    <aside
+      className={`w-[var(--sidebar-w)] h-dvh flex flex-col border-r border-[var(--color-border)] bg-[var(--color-bg-base)] shrink-0 fixed inset-y-0 left-0 z-50 transition-transform duration-300 ease-in-out md:static md:translate-x-0 ${
+        open ? "translate-x-0" : "-translate-x-full"
+      }`}
+    >
       {/* Tenant header */}
       <div className="px-5 py-4 border-b border-[var(--color-border)]">
         <h1
@@ -93,6 +101,7 @@ export default function Sidebar({
             <Link
               key={channel.id}
               href={`/${tenantSlug}/channels/${channel.id}`}
+              onClick={onClose}
               className={`
                 flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm transition-all duration-150
                 ${
@@ -118,7 +127,7 @@ export default function Sidebar({
       <div className="px-3 py-3 border-t border-[var(--color-border)] space-y-1">
         {userRole === "admin" && (
           <button
-            onClick={() => setShowInvite(true)}
+            onClick={() => { setShowInvite(true); onClose?.(); }}
             className="flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm transition-all duration-150 w-full text-left text-[var(--color-text-secondary)] hover:bg-[var(--color-bg-hover)] hover:text-[var(--color-accent-glow)]"
           >
             <UserPlus size={16} />
@@ -127,7 +136,7 @@ export default function Sidebar({
         )}
 
         <button
-          onClick={() => setShowNewSpace(true)}
+          onClick={() => { setShowNewSpace(true); onClose?.(); }}
           className="flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm transition-all duration-150 w-full text-left text-[var(--color-text-secondary)] hover:bg-[var(--color-bg-hover)] hover:text-[var(--color-teal)]"
         >
           <Sparkles size={16} />
@@ -136,6 +145,7 @@ export default function Sidebar({
 
         <Link
           href={`/${tenantSlug}/games`}
+          onClick={onClose}
           className={`
             flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm transition-all duration-150
             ${
@@ -152,6 +162,7 @@ export default function Sidebar({
         {userRole === "admin" && (
           <Link
             href={`/${tenantSlug}/settings`}
+            onClick={onClose}
             className={`
               flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm transition-all duration-150
               ${
@@ -167,7 +178,7 @@ export default function Sidebar({
         )}
 
         <button
-          onClick={handleLogout}
+          onClick={() => { handleLogout(); onClose?.(); }}
           disabled={isLoggingOut}
           className="flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm transition-all duration-150 w-full text-left text-[var(--color-text-muted)] hover:bg-[var(--color-bg-hover)] hover:text-[var(--color-danger)]"
         >

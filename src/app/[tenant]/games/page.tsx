@@ -102,7 +102,7 @@ export default function GamesPage() {
   }
 
   return (
-    <div className="h-screen overflow-y-auto p-6">
+    <div className="h-dvh overflow-y-auto p-4 sm:p-6 pt-16 md:pt-6">
       <div className="max-w-4xl mx-auto">
         {/* Header */}
         <div className="mb-8">

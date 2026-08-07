@@ -150,3 +150,17 @@ body {
   border-color: var(--color-accent);
   color: var(--color-text-primary);
 }
+
+/* ---- Mobile ---- */
+/* Prevent iOS auto-zoom when focusing inputs (font-size < 16px triggers it) */
+@media (max-width: 767px) {
+  input,
+  textarea,
+  select {
+    font-size: 16px !important;
+  }
+  /* Remove tap highlight */
+  * {
+    -webkit-tap-highlight-color: transparent;
+  }
+}

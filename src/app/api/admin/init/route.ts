@@ -61,6 +61,11 @@ export async function POST(req: NextRequest) {
       steps.push("ok");
     } catch (e) {
       const msg = e instanceof Error ? e.message : String(e);
+      // Tolerate idempotent migrations: missing columns already exist on fresh DBs.
+      if (/duplicate column name/i.test(msg)) {
+        steps.push("skip");
+        continue;
+      }
       errors.push(`${sql.slice(0, 60)}... => ${msg}`);
     }
   }

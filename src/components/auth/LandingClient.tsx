@@ -102,6 +102,16 @@ export default function LandingClient({ session }: { session: Session | null }) 
           <ArrowRight size={18} />
         </Link>
 
+        <p className="mt-4 text-sm text-[var(--color-text-muted)]">
+          {t("landing.haveAccount")}{" "}
+          <Link
+            href="/login"
+            className="text-[var(--color-accent-glow)] hover:underline"
+          >
+            {t("landing.login")}
+          </Link>
+        </p>
+
         {/* Feature capsules */}
         <div className="mt-16 flex flex-wrap justify-center gap-3">
           {[

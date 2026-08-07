@@ -24,11 +24,14 @@ export const users = sqliteTable("users", {
   avatarSeed: text("avatar_seed").notNull(), // deterministic avatar generation
   tokenHash: text("token_hash").notNull(), // hashed JWT for session tracking
   role: text("role").default("member"), // "admin" | "member"
+  username: text("username"), // optional login handle (unique per tenant)
+  passwordHash: text("password_hash"), // PBKDF2 hash if user has a password
   isOnline: integer("is_online", { mode: "boolean" }).default(false),
   lastSeen: text("last_seen").default(sql`(datetime('now'))`),
   createdAt: text("created_at").default(sql`(datetime('now'))`),
 }, (table) => [
   uniqueIndex("user_tenant_nickname").on(table.tenantId, table.nickname),
+  uniqueIndex("user_tenant_username").on(table.tenantId, table.username),
 ]);
 
 // ============== Invite Codes ==============

@@ -23,11 +23,17 @@ export const INIT_SQL = [
     avatar_seed TEXT NOT NULL,
     token_hash TEXT NOT NULL,
     role TEXT DEFAULT 'member',
+    username TEXT,
+    password_hash TEXT,
     is_online INTEGER DEFAULT 0,
     last_seen TEXT DEFAULT (datetime('now')),
     created_at TEXT DEFAULT (datetime('now'))
   )`,
   `CREATE UNIQUE INDEX IF NOT EXISTS user_tenant_nickname ON users(tenant_id, nickname)`,
+  `CREATE UNIQUE INDEX IF NOT EXISTS user_tenant_username ON users(tenant_id, username)`,
+  // Add account columns to existing deployments (idempotent: SQLite ignores errors on missing column)
+  `ALTER TABLE users ADD COLUMN username TEXT`,
+  `ALTER TABLE users ADD COLUMN password_hash TEXT`,
 
   `CREATE TABLE IF NOT EXISTS invite_codes (
     id TEXT PRIMARY KEY NOT NULL,

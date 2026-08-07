@@ -1,14 +1,14 @@
 "use client";
 
-import { useState, useEffect, Suspense } from "react";
+import { useState, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import ParticleBackground from "@/components/layout/ParticleBackground";
 import LanguageSwitcher from "@/components/layout/LanguageSwitcher";
 import { useI18n } from "@/lib/i18n";
-import { ArrowLeft, Sparkles, Loader2 } from "lucide-react";
+import { ArrowLeft, KeyRound, Loader2, ShieldCheck } from "lucide-react";
 import Link from "next/link";
 
-export default function JoinPage() {
+export default function LoginPage() {
   return (
     <Suspense
       fallback={
@@ -17,56 +17,40 @@ export default function JoinPage() {
         </main>
       }
     >
-      <JoinForm />
+      <LoginForm />
     </Suspense>
   );
 }
 
-function JoinForm() {
+function LoginForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { t } = useI18n();
-  const [inviteCode, setInviteCode] = useState("");
-  const [nickname, setNickname] = useState("");
+  const [tenantSlug, setTenantSlug] = useState(searchParams.get("space") || "");
+  const [username, setUsername] = useState("");
+  const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
 
-  // Prefill invite code from ?code= param (e.g. a shared join link)
-  useEffect(() => {
-    const code = searchParams.get("code");
-    if (code) {
-      setInviteCode(formatCode(code));
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [searchParams]);
-
-  const formatCode = (value: string) => {
-    const cleaned = value.replace(/[^a-zA-Z0-9]/g, "").toUpperCase();
-    if (cleaned.length <= 4) return cleaned;
-    if (cleaned.length <= 8) return `${cleaned.slice(0, 4)}-${cleaned.slice(4)}`;
-    return `${cleaned.slice(0, 4)}-${cleaned.slice(4, 8)}-${cleaned.slice(8, 12)}`;
-  };
-
-  const handleJoin = async (e: React.FormEvent) => {
+  const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
 
-    if (!inviteCode.trim() || !nickname.trim()) {
-      setError(t("join.error.both"));
-      return;
-    }
-
-    if (nickname.length < 2 || nickname.length > 20) {
-      setError(t("join.error.nickname"));
+    if (!tenantSlug.trim() || !username.trim() || !password) {
+      setError(t("login.error.required"));
       return;
     }
 
     setLoading(true);
     try {
-      const res = await fetch("/api/auth/join", {
+      const res = await fetch("/api/auth/login", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ inviteCode, nickname }),
+        body: JSON.stringify({
+          tenantSlug,
+          username,
+          password,
+        }),
       });
       const data = await res.json();
 
@@ -78,7 +62,7 @@ function JoinForm() {
 
       router.push(`/${data.tenant.slug}`);
     } catch {
-      setError(t("join.error.network"));
+      setError(t("login.error.network"));
       setLoading(false);
     }
   };
@@ -99,53 +83,75 @@ function JoinForm() {
           className="inline-flex items-center gap-1.5 text-sm text-[var(--color-text-muted)] hover:text-[var(--color-text-secondary)] mb-8 transition-colors"
         >
           <ArrowLeft size={16} />
-          {t("join.back")}
+          {t("login.back")}
         </Link>
 
         {/* Card */}
         <div className="glass-card p-8 animate-slide-up">
           <div className="flex items-center gap-3 mb-6">
             <div className="w-10 h-10 rounded-xl bg-[var(--color-accent-muted)] flex items-center justify-center">
-              <Sparkles size={18} className="text-[var(--color-accent-glow)]" />
+              <ShieldCheck size={18} className="text-[var(--color-accent-glow)]" />
             </div>
             <h1 className="font-[family-name:var(--font-display)] font-bold text-xl">
-              {t("join.title")}
+              {t("login.title")}
             </h1>
           </div>
 
-          <form onSubmit={handleJoin} className="space-y-4">
-            {/* Invite code */}
+          <p className="text-xs text-[var(--color-text-muted)] mb-5">
+            {t("login.subtitle")}
+          </p>
+
+          <form onSubmit={handleLogin} className="space-y-4">
+            {/* Space slug */}
             <div>
               <label className="block text-xs font-medium text-[var(--color-text-secondary)] mb-1.5 uppercase tracking-wider">
-                {t("join.invite.label")}
+                {t("login.space.label")}
               </label>
               <input
                 type="text"
-                value={inviteCode}
-                onChange={(e) => setInviteCode(formatCode(e.target.value))}
-                placeholder={t("join.invite.placeholder")}
-                maxLength={14}
-                className="w-full bg-[var(--color-bg-input)] border border-[var(--color-border)] rounded-xl px-4 py-3 text-sm font-mono tracking-[0.3em] text-center text-[var(--color-text-primary)] placeholder:text-[var(--color-text-muted)] focus:outline-none focus:border-[var(--color-accent)] transition-colors"
+                value={tenantSlug}
+                onChange={(e) =>
+                  setTenantSlug(e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, ""))
+                }
+                placeholder={t("login.space.placeholder")}
+                maxLength={40}
+                className="w-full bg-[var(--color-bg-input)] border border-[var(--color-border)] rounded-xl px-4 py-3 text-sm font-mono text-[var(--color-text-primary)] placeholder:text-[var(--color-text-muted)] focus:outline-none focus:border-[var(--color-accent)] transition-colors"
                 autoFocus
+              />
+              <p className="text-[10px] text-[var(--color-text-muted)] mt-1.5">
+                {t("login.space.hint")}
+              </p>
+            </div>
+
+            {/* Username */}
+            <div>
+              <label className="block text-xs font-medium text-[var(--color-text-secondary)] mb-1.5 uppercase tracking-wider">
+                {t("login.username.label")}
+              </label>
+              <input
+                type="text"
+                value={username}
+                onChange={(e) => setUsername(e.target.value)}
+                placeholder={t("login.username.placeholder")}
+                maxLength={24}
+                autoComplete="username"
+                className="w-full bg-[var(--color-bg-input)] border border-[var(--color-border)] rounded-xl px-4 py-3 text-sm text-[var(--color-text-primary)] placeholder:text-[var(--color-text-muted)] focus:outline-none focus:border-[var(--color-accent)] transition-colors"
               />
             </div>
 
-            {/* Nickname */}
+            {/* Password */}
             <div>
               <label className="block text-xs font-medium text-[var(--color-text-secondary)] mb-1.5 uppercase tracking-wider">
-                {t("join.nickname.label")}
+                {t("login.password.label")}
               </label>
               <input
-                type="text"
-                value={nickname}
-                onChange={(e) => setNickname(e.target.value)}
-                placeholder={t("join.nickname.placeholder")}
-                maxLength={20}
+                type="password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                placeholder="••••••••"
+                autoComplete="current-password"
                 className="w-full bg-[var(--color-bg-input)] border border-[var(--color-border)] rounded-xl px-4 py-3 text-sm text-[var(--color-text-primary)] placeholder:text-[var(--color-text-muted)] focus:outline-none focus:border-[var(--color-accent)] transition-colors"
               />
-              <p className="text-[10px] text-[var(--color-text-muted)] mt-1.5">
-                {t("join.nickname.hint")}
-              </p>
             </div>
 
             {/* Error */}
@@ -164,24 +170,24 @@ function JoinForm() {
               {loading ? (
                 <>
                   <Loader2 size={16} className="animate-spin" />
-                  {t("join.submitting")}
+                  {t("login.submitting")}
                 </>
               ) : (
-                t("join.submit")
+                <>
+                  <KeyRound size={16} />
+                  {t("login.submit")}
+                </>
               )}
             </button>
           </form>
 
           <p className="text-xs text-[var(--color-text-muted)] mt-6 text-center">
-            {t("join.noCode")}
-          </p>
-          <p className="text-xs text-[var(--color-text-muted)] mt-2 text-center">
-            {t("join.haveAccount")}{" "}
+            {t("login.noAccount")}{" "}
             <Link
-              href="/login"
+              href="/join"
               className="text-[var(--color-accent-glow)] hover:underline"
             >
-              {t("join.login")}
+              {t("login.goJoin")}
             </Link>
           </p>
         </div>

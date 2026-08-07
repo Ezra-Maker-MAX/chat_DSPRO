@@ -42,7 +42,7 @@ export default function TenantLayoutClient({
   const closeSidebar = () => setSidebarOpen(false);
 
   return (
-    <LayoutContextProvider value={{ openSidebar }}>
+    <LayoutContextProvider value={{ openSidebar, userId, nickname, userRole }}>
       <div className="flex h-dvh overflow-hidden relative">
         <ParticleBackground accentColor="267, 75%, 65%" particleCount={20} />
 

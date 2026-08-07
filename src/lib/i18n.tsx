@@ -217,6 +217,66 @@ const en = {
   "wb.before": "Before character",
   "wb.after": "After character",
 
+  // Landing login link
+  "landing.haveAccount": "Already have an account?",
+  "landing.login": "Log in",
+
+  // Login page
+  "login.back": "Back",
+  "login.title": "Log in",
+  "login.subtitle": "Sign in with your account to rejoin your space.",
+  "login.space.label": "Space Name",
+  "login.space.placeholder": "space-slug",
+  "login.space.hint": "The space's short name from its URL, e.g. my-space",
+  "login.username.label": "Username",
+  "login.username.placeholder": "Your username",
+  "login.password.label": "Password",
+  "login.submit": "Log in",
+  "login.submitting": "Signing in...",
+  "login.noAccount": "No account yet?",
+  "login.goJoin": "Join with an invite code",
+  "login.error.required": "Space, username and password are required",
+  "login.error.network": "Connection failed. Please try again.",
+
+  // Join page login link
+  "join.haveAccount": "Already have an account?",
+  "join.login": "Log in",
+
+  // Account panel (self credential setup)
+  "account.section": "Account",
+  "account.title": "Account & Login",
+  "account.desc":
+    "Set a username and password so you can log back in after your session expires or you log out. Otherwise you'd need a new invite code to rejoin.",
+  "account.loading": "Loading...",
+  "account.active": "Account enabled — you can log in anytime.",
+  "account.username": "Username",
+  "account.username.ph": "3-24 chars, letters/numbers/_ -",
+  "account.password": "Password",
+  "account.saving": "Saving...",
+  "account.update": "Update account",
+  "account.setup": "Enable account login",
+  "account.save": "Save",
+  "account.cancel": "Cancel",
+  "account.saved": "Saved. You can now log in with your username and password.",
+  "account.error.username": "Username must be 3-24 characters (letters, numbers, _ or -)",
+  "account.error.password": "Password must be at least 6 characters",
+  "account.error.network": "Network error — please try again.",
+
+  // Members manager (admin)
+  "admin.users.section": "Members",
+  "admin.users.title": "Members & Accounts",
+  "admin.users.desc":
+    "Set a username and password for a member so they can log in with an account instead of needing an invite code.",
+  "admin.users.noAccount": "No account",
+  "admin.users.admin": "Admin",
+  "admin.users.set": "Set account",
+  "admin.users.edit": "Edit",
+  "admin.users.clear": "Remove account",
+  "admin.users.setTitle": "Set account credentials",
+  "admin.users.setDesc": "Give {name} a username and password to log in.",
+  "admin.users.clearConfirm": "Remove {name}'s account? They will need an invite code to rejoin.",
+  "admin.users.error": "Failed to load members",
+
   // Language switcher
   "lang.label": "Language",
   "lang.en": "English",
@@ -426,6 +486,65 @@ const zh: Record<keyof typeof en, string> = {
   "wb.error.deleteEntry": "删除条目失败",
   "wb.before": "角色之前",
   "wb.after": "角色之后",
+
+  // Landing login link
+  "landing.haveAccount": "已有账号？",
+  "landing.login": "登录",
+
+  // Login page
+  "login.back": "返回",
+  "login.title": "登录",
+  "login.subtitle": "用你的账号登录，重新进入空间。",
+  "login.space.label": "空间名称",
+  "login.space.placeholder": "space-slug",
+  "login.space.hint": "空间 URL 里的短名称，例如 my-space",
+  "login.username.label": "用户名",
+  "login.username.placeholder": "你的用户名",
+  "login.password.label": "密码",
+  "login.submit": "登录",
+  "login.submitting": "登录中...",
+  "login.noAccount": "还没有账号？",
+  "login.goJoin": "用邀请码加入",
+  "login.error.required": "空间、用户名和密码均为必填项",
+  "login.error.network": "连接失败，请重试。",
+
+  // Join page login link
+  "join.haveAccount": "已有账号？",
+  "join.login": "登录",
+
+  // Account panel (self credential setup)
+  "account.section": "账号",
+  "account.title": "账号与登录",
+  "account.desc":
+    "设置用户名和密码后，会话过期或退出后仍可重新登录，无需再要新的邀请码。",
+  "account.loading": "加载中...",
+  "account.active": "已启用账号登录，随时可登录。",
+  "account.username": "用户名",
+  "account.username.ph": "3-24 位，字母/数字/_ -",
+  "account.password": "密码",
+  "account.saving": "保存中...",
+  "account.update": "更新账号",
+  "account.setup": "启用账号登录",
+  "account.save": "保存",
+  "account.cancel": "取消",
+  "account.saved": "已保存，现在可以用用户名和密码登录了。",
+  "account.error.username": "用户名需为 3-24 位（字母、数字、_ 或 -）",
+  "account.error.password": "密码至少 6 位",
+  "account.error.network": "网络错误，请重试。",
+
+  // Members manager (admin)
+  "admin.users.section": "成员",
+  "admin.users.title": "成员与账号",
+  "admin.users.desc": "为成员设置用户名和密码，让他们无需邀请码也能用账号登录。",
+  "admin.users.noAccount": "无账号",
+  "admin.users.admin": "管理员",
+  "admin.users.set": "设置账号",
+  "admin.users.edit": "编辑",
+  "admin.users.clear": "移除账号",
+  "admin.users.setTitle": "设置账号凭据",
+  "admin.users.setDesc": "为 {name} 设置用户名和密码以支持登录。",
+  "admin.users.clearConfirm": "移除 {name} 的账号？他们需要新的邀请码才能重新加入。",
+  "admin.users.error": "加载成员失败",
 
   // Language switcher
   "lang.label": "语言",

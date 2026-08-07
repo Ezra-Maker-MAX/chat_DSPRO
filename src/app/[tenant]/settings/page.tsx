@@ -2,9 +2,12 @@
 
 import { useState, useEffect } from "react";
 import { useI18n } from "@/lib/i18n";
-import { Settings, Cpu, Plus, Trash2, Loader2, Check, X, Key, Globe, Bot, BookOpen } from "lucide-react";
+import { Settings, Cpu, Plus, Trash2, Loader2, Check, Key, Globe, Bot, BookOpen, UserCircle, Users } from "lucide-react";
 import BotSettings from "@/components/settings/BotSettings";
 import WorldBooksManager from "@/components/settings/WorldBooksManager";
+import AccountPanel from "@/components/settings/AccountPanel";
+import MembersManager from "@/components/settings/MembersManager";
+import { useLayout } from "@/components/layout/LayoutContext";
 
 interface LLM {
   id: string;
@@ -17,6 +20,8 @@ interface LLM {
 
 export default function SettingsPage() {
   const { t } = useI18n();
+  const { userRole } = useLayout();
+  const isAdmin = userRole === "admin";
   const [providers, setProviders] = useState<LLM[]>([]);
   const [loading, setLoading] = useState(true);
   const [showAdd, setShowAdd] = useState(false);
@@ -117,6 +122,15 @@ export default function SettingsPage() {
             </h1>
           </div>
         </div>
+
+        {/* Account (self credential setup) */}
+        <section className="mb-8">
+          <div className="flex items-center gap-2 mb-4">
+            <UserCircle size={16} className="text-[var(--color-accent)]" />
+            <h2 className="font-semibold text-sm">{t("account.section")}</h2>
+          </div>
+          <AccountPanel />
+        </section>
 
         {/* LLM Providers */}
         <section>
@@ -308,6 +322,17 @@ export default function SettingsPage() {
           </div>
           <WorldBooksManager />
         </section>
+
+        {/* Members manager (admin only) */}
+        {isAdmin && (
+          <section className="mt-8">
+            <div className="flex items-center gap-2 mb-4">
+              <Users size={16} className="text-[var(--color-teal)]" />
+              <h2 className="font-semibold text-sm">{t("admin.users.section")}</h2>
+            </div>
+            <MembersManager />
+          </section>
+        )}
       </div>
     </div>
   );

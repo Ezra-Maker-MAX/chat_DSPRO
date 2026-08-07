@@ -1,17 +1,34 @@
 "use client";
 
-import { useState } from "react";
-import { useRouter } from "next/navigation";
+import { useState, useEffect } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import ParticleBackground from "@/components/layout/ParticleBackground";
 import { ArrowLeft, Sparkles, Loader2 } from "lucide-react";
 import Link from "next/link";
 
 export default function JoinPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [inviteCode, setInviteCode] = useState("");
   const [nickname, setNickname] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+
+  // Prefill invite code from ?code= param (e.g. a shared join link)
+  useEffect(() => {
+    const code = searchParams.get("code");
+    if (code) {
+      setInviteCode(formatCode(code));
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchParams]);
+
+  const formatCode = (value: string) => {
+    const cleaned = value.replace(/[^a-zA-Z0-9]/g, "").toUpperCase();
+    if (cleaned.length <= 4) return cleaned;
+    if (cleaned.length <= 8) return `${cleaned.slice(0, 4)}-${cleaned.slice(4)}`;
+    return `${cleaned.slice(0, 4)}-${cleaned.slice(4, 8)}-${cleaned.slice(8, 12)}`;
+  };
 
   const handleJoin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -47,13 +64,6 @@ export default function JoinPage() {
       setError("Connection failed. Please try again.");
       setLoading(false);
     }
-  };
-
-  const formatCode = (value: string) => {
-    const cleaned = value.replace(/[^a-zA-Z0-9]/g, "").toUpperCase();
-    if (cleaned.length <= 4) return cleaned;
-    if (cleaned.length <= 8) return `${cleaned.slice(0, 4)}-${cleaned.slice(4)}`;
-    return `${cleaned.slice(0, 4)}-${cleaned.slice(4, 8)}-${cleaned.slice(8, 12)}`;
   };
 
   return (

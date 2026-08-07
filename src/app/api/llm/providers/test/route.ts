@@ -68,7 +68,7 @@ export async function POST(req: NextRequest) {
         ...(provider === "anthropic" ? { "x-api-key": apiKey, "anthropic-version": "2023-06-01" } : {}),
       },
       body: JSON.stringify(buildPingBody(provider, model)),
-    }, 15_000);
+    }, 30_000); // Proxy gateways (Agnes / LiteLLM) can be slow on first request; give them room.
 
     const latencyMs = Date.now() - start;
     const text = await resp.text();
@@ -89,8 +89,13 @@ export async function POST(req: NextRequest) {
   } catch (e) {
     const latencyMs = Date.now() - start;
     const msg = e instanceof Error ? e.message : "Network error";
+    // AbortError → timeout; give a clear message instead of the raw DOMException text.
+    const displayMsg =
+      msg === "The operation was aborted" || msg === "This operation was aborted"
+        ? `Request timed out after ${latencyMs}ms. The gateway may be slow or unreachable — check your base URL and try again.`
+        : msg;
     return NextResponse.json(
-      { ok: false, error: msg, latencyMs },
+      { ok: false, error: displayMsg, latencyMs },
       { status: 200 }
     );
   }

@@ -9,9 +9,11 @@ import {
   Gamepad2,
   Settings,
   LogOut,
-  Users,
-  MessageSquare,
+  UserPlus,
+  Sparkles,
 } from "lucide-react";
+import InviteModal from "./InviteModal";
+import NewSpaceModal from "./NewSpaceModal";
 
 interface Channel {
   id: string;
@@ -40,6 +42,8 @@ export default function Sidebar({
   const router = useRouter();
   const pathname = usePathname();
   const [isLoggingOut, setIsLoggingOut] = useState(false);
+  const [showInvite, setShowInvite] = useState(false);
+  const [showNewSpace, setShowNewSpace] = useState(false);
 
   const handleLogout = async () => {
     setIsLoggingOut(true);
@@ -112,6 +116,24 @@ export default function Sidebar({
 
       {/* Bottom nav */}
       <div className="px-3 py-3 border-t border-[var(--color-border)] space-y-1">
+        {userRole === "admin" && (
+          <button
+            onClick={() => setShowInvite(true)}
+            className="flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm transition-all duration-150 w-full text-left text-[var(--color-text-secondary)] hover:bg-[var(--color-bg-hover)] hover:text-[var(--color-accent-glow)]"
+          >
+            <UserPlus size={16} />
+            Invite friends
+          </button>
+        )}
+
+        <button
+          onClick={() => setShowNewSpace(true)}
+          className="flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm transition-all duration-150 w-full text-left text-[var(--color-text-secondary)] hover:bg-[var(--color-bg-hover)] hover:text-[var(--color-teal)]"
+        >
+          <Sparkles size={16} />
+          New space
+        </button>
+
         <Link
           href={`/${tenantSlug}/games`}
           className={`
@@ -153,6 +175,9 @@ export default function Sidebar({
           {isLoggingOut ? "Leaving..." : "Leave Space"}
         </button>
       </div>
+
+      {showInvite && <InviteModal onClose={() => setShowInvite(false)} />}
+      {showNewSpace && <NewSpaceModal onClose={() => setShowNewSpace(false)} />}
     </aside>
   );
 }

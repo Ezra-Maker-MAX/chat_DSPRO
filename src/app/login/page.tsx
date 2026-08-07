@@ -178,6 +178,9 @@ function LoginForm() {
                 autoComplete="username"
                 className="w-full bg-[var(--color-bg-input)] border border-[var(--color-border)] rounded-xl px-4 py-3 text-sm text-[var(--color-text-primary)] placeholder:text-[var(--color-text-muted)] focus:outline-none focus:border-[var(--color-accent)] transition-colors"
               />
+              <p className="text-[10px] text-[var(--color-text-muted)] mt-1.5">
+                {t("login.username.hint")}
+              </p>
             </div>
 
             {/* Password */}

@@ -12,6 +12,7 @@ import {
   Sparkles,
   X,
   KeyRound,
+  Pencil,
 } from "lucide-react";
 
 interface CharacterCard {
@@ -57,6 +58,7 @@ export default function RoleplayHub() {
 
   // Card editor state
   const [editing, setEditing] = useState(false);
+  const [editingId, setEditingId] = useState<string | null>(null); // null = create mode
   const [form, setForm] = useState<{ name: string } & typeof DEFAULT_FIELDS>({
     name: "",
     ...DEFAULT_FIELDS,
@@ -160,10 +162,11 @@ export default function RoleplayHub() {
     }
     setError("");
     try {
+      const isUpdate = !!editingId;
       const res = await fetch("/api/characters", {
-        method: "POST",
+        method: isUpdate ? "PATCH" : "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(form),
+        body: JSON.stringify(isUpdate ? { ...form, id: editingId } : form),
       });
       const data = await res.json();
       if (data.error) {
@@ -171,11 +174,36 @@ export default function RoleplayHub() {
         return;
       }
       setEditing(false);
+      setEditingId(null);
       setForm({ name: "", ...DEFAULT_FIELDS });
       await fetchAll();
     } catch {
       setError(t("rp.error.save"));
     }
+  };
+
+  const startEdit = (card: CharacterCard) => {
+    setEditingId(card.id);
+    setForm({
+      name: card.name,
+      description: card.description || "",
+      personality: card.personality || "",
+      scenario: card.scenario || "",
+      firstMes: card.firstMes || "",
+      mesExample: card.mesExample || "",
+      systemPrompt: card.systemPrompt || "",
+      postHistoryInstructions: card.postHistoryInstructions || "",
+      worldBookId: card.worldBookId,
+    });
+    setError("");
+    setEditing(true);
+  };
+
+  const cancelEdit = () => {
+    setEditing(false);
+    setEditingId(null);
+    setForm({ name: "", ...DEFAULT_FIELDS });
+    setError("");
   };
 
   const deleteCard = async (id: string) => {
@@ -304,6 +332,7 @@ export default function RoleplayHub() {
           </div>
           <button
             onClick={() => {
+              setEditingId(null);
               setEditing(true);
               setForm({ name: "", ...DEFAULT_FIELDS });
               setError("");
@@ -324,7 +353,7 @@ export default function RoleplayHub() {
         {/* Editor */}
         {editing && (
           <div className="glass-card p-5 mb-6 animate-fade-in">
-            <h3 className="font-medium text-sm mb-4">{t("rp.create.title")}</h3>
+            <h3 className="font-medium text-sm mb-4">{editingId ? t("rp.edit.title") : t("rp.create.title")}</h3>
             <div className="space-y-3">
               <div>
                 <label className="block text-xs text-[var(--color-text-muted)] mb-1">{t("rp.name")}</label>
@@ -422,7 +451,7 @@ export default function RoleplayHub() {
                 {t("rp.save")}
               </button>
               <button
-                onClick={() => setEditing(false)}
+                onClick={cancelEdit}
                 className="px-4 py-2.5 rounded-lg border border-[var(--color-border)] text-sm text-[var(--color-text-secondary)] hover:bg-[var(--color-bg-hover)] transition-colors"
               >
                 {t("rp.cancel")}
@@ -462,13 +491,22 @@ export default function RoleplayHub() {
                       )}
                     </p>
                   </div>
-                  <button
-                    onClick={() => deleteCard(card.id)}
-                    className="p-1.5 rounded-lg text-[var(--color-text-muted)] hover:text-[var(--color-danger)] hover:bg-[var(--color-bg-hover)] opacity-0 group-hover:opacity-100 transition-all"
-                    title="Delete"
-                  >
-                    <Trash2 size={14} />
-                  </button>
+                  <div className="flex items-center gap-0.5">
+                    <button
+                      onClick={() => startEdit(card)}
+                      className="p-1.5 rounded-lg text-[var(--color-text-muted)] hover:text-[var(--color-teal)] hover:bg-[var(--color-bg-hover)] opacity-0 group-hover:opacity-100 transition-all"
+                      title={t("rp.edit")}
+                    >
+                      <Pencil size={14} />
+                    </button>
+                    <button
+                      onClick={() => deleteCard(card.id)}
+                      className="p-1.5 rounded-lg text-[var(--color-text-muted)] hover:text-[var(--color-danger)] hover:bg-[var(--color-bg-hover)] opacity-0 group-hover:opacity-100 transition-all"
+                      title="Delete"
+                    >
+                      <Trash2 size={14} />
+                    </button>
+                  </div>
                 </div>
                 <p className="text-xs text-[var(--color-text-secondary)] line-clamp-2 flex-1 mb-3">
                   {card.description || t("rp.empty")}

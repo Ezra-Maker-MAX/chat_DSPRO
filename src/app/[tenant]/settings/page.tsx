@@ -6,7 +6,7 @@ import { Settings, Cpu, Plus, Trash2, Loader2, Check, X, Key, Globe, Bot, BookOp
 import BotSettings from "@/components/settings/BotSettings";
 import WorldBooksManager from "@/components/settings/WorldBooksManager";
 
-interface LLM{t("settings.form.provider")} {
+interface LLM {
   id: string;
   name: string;
   provider: string;
@@ -17,28 +17,28 @@ interface LLM{t("settings.form.provider")} {
 
 export default function SettingsPage() {
   const { t } = useI18n();
-  const [providers, set{t("settings.form.provider")}s] = useState<LLM{t("settings.form.provider")}[]>([]);
+  const [providers, setProviders] = useState<LLM[]>([]);
   const [loading, setLoading] = useState(true);
   const [showAdd, setShowAdd] = useState(false);
   const [error, setError] = useState("");
 
   // Form state
   const [formName, setFormName] = useState("");
-  const [form{t("settings.form.provider")}, setForm{t("settings.form.provider")}] = useState("openai");
+  const [formProvider, setFormProvider] = useState("openai");
   const [formModel, setFormModel] = useState("");
   const [formApiKey, setFormApiKey] = useState("");
   const [formBaseUrl, setFormBaseUrl] = useState("");
   const [saving, setSaving] = useState(false);
 
-  const fetch{t("settings.form.provider")}s = async () => {
+  const fetchProviders = async () => {
     const res = await fetch("/api/llm/providers");
     const data = await res.json();
-    set{t("settings.form.provider")}s(data.providers || []);
+    setProviders(data.providers || []);
     setLoading(false);
   };
 
   useEffect(() => {
-    fetch{t("settings.form.provider")}s();
+    fetchProviders();
   }, []);
 
   const handleAdd = async () => {
@@ -55,7 +55,7 @@ export default function SettingsPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           name: formName,
-          provider: form{t("settings.form.provider")},
+          provider: formProvider,
           model: formModel,
           apiKey: formApiKey,
           baseUrl: formBaseUrl || undefined,
@@ -67,21 +67,22 @@ export default function SettingsPage() {
       } else {
         setShowAdd(false);
         resetForm();
-        await fetch{t("settings.form.provider")}s();
+        await fetchProviders();
       }
     } catch {
       setError(t("settings.error.add"));
-    }    setSaving(false);
+    }
+    setSaving(false);
   };
 
   const handleDelete = async (id: string) => {
     await fetch(`/api/llm/providers?id=${id}`, { method: "DELETE" });
-    await fetch{t("settings.form.provider")}s();
+    await fetchProviders();
   };
 
   const resetForm = () => {
     setFormName("");
-    setForm{t("settings.form.provider")}("openai");
+    setFormProvider("openai");
     setFormModel("");
     setFormApiKey("");
     setFormBaseUrl("");
@@ -117,7 +118,7 @@ export default function SettingsPage() {
           </div>
         </div>
 
-        {/* {t("settings.llm")} */}
+        {/* LLM Providers */}
         <section>
           <div className="flex items-center justify-between mb-4">
             <div className="flex items-center gap-2">
@@ -129,7 +130,7 @@ export default function SettingsPage() {
               className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[var(--color-accent-muted)] text-[var(--color-accent-glow)] text-xs font-medium hover:bg-[var(--color-accent)]/20 transition-colors"
             >
               <Plus size={12} />
-              {t("settings.add{t("settings.form.provider")}")}
+              {t("settings.addProvider")}
             </button>
           </div>
 
@@ -144,7 +145,7 @@ export default function SettingsPage() {
                   <input
                     value={formName}
                     onChange={(e) => setFormName(e.target.value)}
-                    placeholder="{t("settings.form.name.ph")}"
+                    placeholder={t("settings.form.name.ph")}
                     className="w-full bg-[var(--color-bg-input)] border border-[var(--color-border)] rounded-lg px-3 py-2 text-xs text-[var(--color-text-primary)] focus:outline-none focus:border-[var(--color-accent)]"
                   />
                 </div>
@@ -153,8 +154,8 @@ export default function SettingsPage() {
                     {t("settings.form.provider")}
                   </label>
                   <select
-                    value={form{t("settings.form.provider")}}
-                    onChange={(e) => setForm{t("settings.form.provider")}(e.target.value)}
+                    value={formProvider}
+                    onChange={(e) => setFormProvider(e.target.value)}
                     className="w-full bg-[var(--color-bg-input)] border border-[var(--color-border)] rounded-lg px-3 py-2 text-xs text-[var(--color-text-primary)] focus:outline-none focus:border-[var(--color-accent)]"
                   >
                     <option value="openai">OpenAI</option>
@@ -172,7 +173,7 @@ export default function SettingsPage() {
                 <input
                   value={formModel}
                   onChange={(e) => setFormModel(e.target.value)}
-                  placeholder="{t("settings.form.model.ph")}"
+                  placeholder={t("settings.form.model.ph")}
                   className="w-full bg-[var(--color-bg-input)] border border-[var(--color-border)] rounded-lg px-3 py-2 text-xs text-[var(--color-text-primary)] font-mono focus:outline-none focus:border-[var(--color-accent)]"
                 />
               </div>
@@ -185,7 +186,7 @@ export default function SettingsPage() {
                   type="password"
                   value={formApiKey}
                   onChange={(e) => setFormApiKey(e.target.value)}
-                  placeholder="sk-..."
+                  placeholder={t("settings.form.apiKey.ph")}
                   className="w-full bg-[var(--color-bg-input)] border border-[var(--color-border)] rounded-lg px-3 py-2 text-xs text-[var(--color-text-primary)] font-mono focus:outline-none focus:border-[var(--color-accent)]"
                 />
               </div>
@@ -197,7 +198,7 @@ export default function SettingsPage() {
                 <input
                   value={formBaseUrl}
                   onChange={(e) => setFormBaseUrl(e.target.value)}
-                  placeholder="{t("settings.form.baseUrl.ph")}"
+                  placeholder={t("settings.form.baseUrl.ph")}
                   className="w-full bg-[var(--color-bg-input)] border border-[var(--color-border)] rounded-lg px-3 py-2 text-xs text-[var(--color-text-primary)] focus:outline-none focus:border-[var(--color-accent)]"
                 />
               </div>
@@ -227,7 +228,7 @@ export default function SettingsPage() {
             </div>
           )}
 
-          {/* {t("settings.form.provider")} list */}
+          {/* Provider list */}
           {providers.length === 0 ? (
             <div className="glass-card p-8 text-center">
               <Key size={24} className="mx-auto mb-3 text-[var(--color-text-muted)]" />
@@ -290,7 +291,7 @@ export default function SettingsPage() {
           </p>
         </section>
 
-        {/* {t("settings.bot")} */}
+        {/* Bot & AI Gateway */}
         <section className="mt-8">
           <div className="flex items-center gap-2 mb-4">
             <Bot size={16} className="text-[var(--color-teal)]" />

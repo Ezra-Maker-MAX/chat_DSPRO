@@ -265,7 +265,7 @@ export default function RoleplayHub() {
       });
       const data = await res.json();
       if (data.error) {
-        setAvatarError(data.error);
+        setAvatarError(data.hint ? `${data.error} — ${data.hint}` : data.error);
         return;
       }
       if (slot === "avatar") {
@@ -319,7 +319,7 @@ export default function RoleplayHub() {
       const res = await fetch("/api/characters/avatar/upload", { method: "POST", body: fd });
       const data = await res.json();
       if (data.error) {
-        setAvatarError(data.error);
+        setAvatarError(data.hint ? `${data.error} — ${data.hint}` : data.error);
         return;
       }
       if (slot === "avatar") {

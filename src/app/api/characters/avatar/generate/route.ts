@@ -2,12 +2,19 @@ import { NextRequest, NextResponse } from "next/server";
 import { getSession } from "@/lib/auth";
 import { ensureBotProfile, generateImageBytes } from "@/lib/bot";
 import { buildAndUploadAvatar } from "@/lib/chara-avatar";
+import { humanizeImageError } from "@/lib/image-errors";
 
 type EmoteSlot = "avatar" | "0" | "1" | "2" | "3";
 
 function parseSlot(raw: unknown): EmoteSlot {
   if (raw === "0" || raw === "1" || raw === "2" || raw === "3") return raw;
   return "avatar";
+}
+
+/** Cap a field to keep auto-prompts short — long text trips image-API policies. */
+function cap(s: unknown, n = 120): string {
+  const t = String(s ?? "").trim().replace(/\s+/g, " ");
+  return t.length > n ? t.slice(0, n).trimEnd() + "…" : t;
 }
 
 /**
@@ -39,8 +46,9 @@ export async function POST(req: NextRequest) {
 
   const slot: EmoteSlot = parseSlot(body.slot);
 
-  // Use the user-provided prompt, else synthesise a portrait prompt from the card.
-  const prompt =
+// Use the user-provided prompt, else synthesise a short portrait prompt
+// from a handful of card fields, capped to avoid tripping content policy.
+const prompt =
     body.prompt?.trim() ||
     [
       slot === "avatar"
@@ -48,9 +56,9 @@ export async function POST(req: NextRequest) {
         : `character expression, square headshot, ${
             ["happy", "angry", "eating", "dazed"][Number(slot)] || "neutral"
           } mood`,
-      `subject: ${name}`,
-      body.description || "",
-      body.personality || "",
+      `subject: ${cap(name, 40)}`,
+      cap(body.description, 120),
+      cap(body.personality, 80),
     ]
       .filter(Boolean)
       .join(", ");
@@ -76,7 +84,11 @@ export async function POST(req: NextRequest) {
     );
     return NextResponse.json({ url });
   } catch (e) {
-    const msg = e instanceof Error ? e.message : String(e);
-    return NextResponse.json({ error: msg }, { status: 502 });
+    const raw = e instanceof Error ? e.message : String(e);
+    const friendly = humanizeImageError(raw);
+    return NextResponse.json(
+      { error: friendly.message, hint: friendly.hint, code: friendly.code, raw: friendly.raw },
+      { status: 502 }
+    );
   }
 }

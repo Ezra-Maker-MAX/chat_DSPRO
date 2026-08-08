@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getSession } from "@/lib/auth";
 import { buildAndUploadAvatar } from "@/lib/chara-avatar";
+import { humanizeImageError } from "@/lib/image-errors";
 
 const ALLOWED = new Set(["image/png", "image/jpeg", "image/webp", "image/gif"]);
 
@@ -74,7 +75,11 @@ export async function POST(req: NextRequest) {
     );
     return NextResponse.json({ url });
   } catch (e) {
-    const msg = e instanceof Error ? e.message : String(e);
-    return NextResponse.json({ error: msg }, { status: 502 });
+    const raw = e instanceof Error ? e.message : String(e);
+    const friendly = humanizeImageError(raw);
+    return NextResponse.json(
+      { error: friendly.message, hint: friendly.hint, code: friendly.code, raw: friendly.raw },
+      { status: 502 }
+    );
   }
 }

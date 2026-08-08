@@ -2,6 +2,7 @@
 
 import { formatTime } from "@/lib/utils";
 import { useState } from "react";
+import { useI18n } from "@/lib/i18n";
 interface Media {
   id: string;
   storageUrl: string;
@@ -19,11 +20,16 @@ interface Message {
   nickname: string;
   avatarSeed: string;
   media?: Media[];
+  replyToId?: string | null;
+  targetUserId?: string | null;
+  /** Hydrated by GET /api/chat/messages — the snippet of the message this one replies to. */
+  replyTo?: { content: string; nickname: string; type: string } | null;
 }
 
 interface Props {
   message: Message;
   isOwn: boolean;
+  onReply?: (msg: Message) => void;
 }
 
 function Avatar({ seed, nickname }: { seed: string; nickname: string }) {
@@ -58,8 +64,33 @@ function Avatar({ seed, nickname }: { seed: string; nickname: string }) {
   );
 }
 
-export default function MessageBubble({ message, isOwn }: Props) {
+/** Compact preview of a message that this one is replying to. */
+function ReplyPreview({ replyTo, isBot }: { replyTo: NonNullable<Message["replyTo"]>; isBot: boolean }) {
+  const replyIsBot = replyTo.nickname.toLowerCase().includes("bot");
+  const previewText =
+    replyTo.type === "image" ? "🖼 图片" :
+    replyTo.type === "audio" ? "🎤 语音" :
+    replyTo.type === "video" ? "🎬 视频" :
+    replyTo.content || "(空)";
+  return (
+    <div
+      className={`mb-1 px-2.5 py-1 rounded-md border-l-2 text-[11px] leading-snug max-w-full ${
+        isBot
+          ? "bg-[var(--color-bg-elevated)]/60 border-[var(--color-teal)] text-[var(--color-text-muted)]"
+          : "bg-[var(--color-bg-elevated)] border-[var(--color-accent)]/60 text-[var(--color-text-muted)]"
+      }`}
+    >
+      <span className="font-medium text-[var(--color-text-secondary)]">
+        {replyIsBot ? "🤖" : "@"}{replyTo.nickname}
+      </span>
+      <span className="ml-1.5 truncate align-middle">{previewText}</span>
+    </div>
+  );
+}
+
+export default function MessageBubble({ message, isOwn, onReply }: Props) {
   const [imgError, setImgError] = useState<Record<string, boolean>>({});
+  const { t } = useI18n();
 
   if (message.type === "system") {
     return (
@@ -75,7 +106,7 @@ export default function MessageBubble({ message, isOwn }: Props) {
 
   return (
     <div
-      className={`flex gap-3 px-4 py-1.5 animate-message-in ${
+      className={`group/bubble flex gap-3 px-4 py-1.5 animate-message-in relative ${
         isOwn ? "flex-row-reverse" : ""
       }`}
       style={{ animationDelay: "0s" }}
@@ -88,6 +119,9 @@ export default function MessageBubble({ message, isOwn }: Props) {
             {message.nickname}
           </span>
         )}
+
+        {/* Reply preview (above media + bubble) */}
+        {message.replyTo && <ReplyPreview replyTo={message.replyTo} isBot={isBot} />}
 
         {/* Media content */}
         {message.media?.map((m) => (
@@ -138,6 +172,23 @@ export default function MessageBubble({ message, isOwn }: Props) {
       </div>
 
       {isOwn && <Avatar seed={message.avatarSeed} nickname={message.nickname} />}
+
+      {/* Hover menu — Reply */}
+      {onReply && (
+        <button
+          type="button"
+          aria-label={t("chat.reply.aria")}
+          onClick={(e) => {
+            e.stopPropagation();
+            onReply(message);
+          }}
+          className={`absolute top-1/2 -translate-y-1/2 ${
+            isOwn ? "left-2" : "right-2"
+          } opacity-0 group-hover/bubble:opacity-100 transition-opacity text-[10px] px-2 py-1 rounded-md bg-[var(--color-bg-elevated)] border border-[var(--color-border)] text-[var(--color-text-secondary)] hover:text-[var(--color-accent-glow)] shadow-sm`}
+        >
+          ↩ {t("chat.reply.aria")}
+        </button>
+      )}
     </div>
   );
 }

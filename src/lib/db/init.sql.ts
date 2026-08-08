@@ -68,9 +68,14 @@ export const INIT_SQL = [
     user_id TEXT NOT NULL REFERENCES users(id),
     content TEXT DEFAULT '',
     type TEXT DEFAULT 'text',
+    reply_to_id TEXT,
+    target_user_id TEXT,
     edited_at TEXT,
     created_at TEXT DEFAULT (datetime('now'))
   )`,
+  // Idempotent ALTERs for existing deployments.
+  `ALTER TABLE messages ADD COLUMN reply_to_id TEXT`,
+  `ALTER TABLE messages ADD COLUMN target_user_id TEXT`,
 
   `CREATE TABLE IF NOT EXISTS media (
     id TEXT PRIMARY KEY NOT NULL,

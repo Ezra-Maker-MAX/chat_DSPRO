@@ -88,6 +88,9 @@ const en = {
   "chat.stop.title": "Stop recording",
   "chat.uploading": "Uploading...",
   "chat.attach": "Attach",
+  "chat.reply.banner": "Reply to {nickname}:",
+  "chat.reply.cancel": "Cancel reply",
+  "chat.reply.aria": "Reply",
   "chat.bot.commands": "Bot commands",
   "chat.justNow": "just now",
 
@@ -444,6 +447,9 @@ const zh: Record<keyof typeof en, string> = {
   "chat.stop.title": "停止录音",
   "chat.uploading": "上传中...",
   "chat.attach": "附上",
+  "chat.reply.banner": "回复 {nickname}：",
+  "chat.reply.cancel": "取消回复",
+  "chat.reply.aria": "回复",
   "chat.bot.commands": "机器人命令",
   "chat.justNow": "刚刚",
 

@@ -15,6 +15,17 @@ interface Message {
   nickname: string;
   avatarSeed: string;
   media?: { id: string; storageUrl: string; mediaType: string; fileName: string; mimeType: string }[];
+  replyToId?: string | null;
+  targetUserId?: string | null;
+  replyTo?: { content: string; nickname: string; type: string } | null;
+}
+
+interface ReplyTarget {
+  id: string;
+  nickname: string;
+  content: string;
+  type: string;
+  userId: string;
 }
 
 interface Props {
@@ -35,6 +46,7 @@ export default function ChatArea({
   const [messages, setMessages] = useState<Message[]>([]);
   const [loading, setLoading] = useState(true);
   const [hasMore, setHasMore] = useState(false);
+  const [replyTarget, setReplyTarget] = useState<ReplyTarget | null>(null);
   const { t } = useI18n();
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -141,14 +153,25 @@ export default function ChatArea({
   }, [messages.length]);
 
   const handleSend = useCallback(
-    async (content: string, mediaIds: string[]) => {
+    async (
+      content: string,
+      mediaIds: string[],
+      opts?: { replyToId?: string; targetUserId?: string }
+    ) => {
       // Slash commands: route to the bot, still show the user's command message
       if (content.trim().startsWith("/") && mediaIds.length === 0) {
         // Post the command as a normal message first
         const res = await fetch("/api/chat/messages", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ channelId, content, type: "text", mediaIds: [] }),
+          body: JSON.stringify({
+            channelId,
+            content,
+            type: "text",
+            mediaIds: [],
+            replyToId: opts?.replyToId,
+            targetUserId: opts?.targetUserId,
+          }),
         });
         const data = await res.json();
         if (data.message) {
@@ -176,6 +199,8 @@ export default function ChatArea({
         userId: currentUserId,
         nickname: "You",
         avatarSeed: "you",
+        replyToId: opts?.replyToId || null,
+        targetUserId: opts?.targetUserId || null,
         media: mediaIds.map((id) => ({
           id,
           storageUrl: "",
@@ -191,7 +216,14 @@ export default function ChatArea({
         const res = await fetch("/api/chat/messages", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ channelId, content, type: mediaIds.length > 0 ? "media" : "text", mediaIds }),
+          body: JSON.stringify({
+            channelId,
+            content,
+            type: mediaIds.length > 0 ? "media" : "text",
+            mediaIds,
+            replyToId: opts?.replyToId,
+            targetUserId: opts?.targetUserId,
+          }),
         });
         const data = await res.json();
         if (data.message) {
@@ -205,6 +237,18 @@ export default function ChatArea({
     },
     [channelId, currentUserId]
   );
+
+  const handleReply = useCallback((msg: Message) => {
+    setReplyTarget({
+      id: msg.id,
+      nickname: msg.nickname,
+      content: msg.content,
+      type: msg.type,
+      userId: msg.userId,
+    });
+  }, []);
+
+  const clearReply = useCallback(() => setReplyTarget(null), []);
 
   return (
     <div className="flex-1 flex flex-col h-dvh">
@@ -243,6 +287,7 @@ export default function ChatArea({
                 key={msg.id}
                 message={msg}
                 isOwn={msg.userId === currentUserId}
+                onReply={handleReply}
               />
             ))}
           </>
@@ -256,6 +301,8 @@ export default function ChatArea({
         onSend={handleSend}
         allowMedia={allowMedia}
         allowVoice={allowVoice}
+        replyTarget={replyTarget}
+        onClearReply={clearReply}
       />
     </div>
   );

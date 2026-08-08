@@ -11,14 +11,31 @@ const BOT_COMMANDS = [
   { name: "help", usage: "/help", desc: "List all bot commands" },
 ];
 
-interface Props {
-  channelId: string;
-  onSend: (content: string, mediaIds: string[]) => Promise<void>;
-  allowMedia: boolean;
-  allowVoice: boolean;
+interface ReplyTarget {
+  id: string;
+  nickname: string;
+  content: string;
+  type: string;
+  userId: string;
 }
 
-export default function MessageInput({ channelId, onSend, allowMedia, allowVoice }: Props) {
+interface Props {
+  channelId: string;
+  onSend: (
+    content: string,
+    mediaIds: string[],
+    opts?: { replyToId?: string; targetUserId?: string }
+  ) => Promise<void>;
+  allowMedia: boolean;
+  allowVoice: boolean;
+  /** When set, show a reply banner above the input and forward replyToId /
+   *  targetUserId on send. Caller controls the state and passes `null` to
+   *  clear it after send/cancel. */
+  replyTarget: ReplyTarget | null;
+  onClearReply: () => void;
+}
+
+export default function MessageInput({ channelId, onSend, allowMedia, allowVoice, replyTarget, onClearReply }: Props) {
   const { t } = useI18n();
   const [content, setContent] = useState("");
   const [sending, setSending] = useState(false);
@@ -61,11 +78,15 @@ export default function MessageInput({ channelId, onSend, allowMedia, allowVoice
 
     setSending(true);
     try {
-      await onSend(trimmed, mediaIds);
+      await onSend(trimmed, mediaIds, {
+        replyToId: replyTarget?.id,
+        targetUserId: replyTarget?.userId,
+      });
       setContent("");
       setUploadedMedia([]);
       setAudioBlob(null);
       setAudioUrl(null);
+      onClearReply();
     } finally {
       setSending(false);
       textareaRef.current?.focus();
@@ -189,6 +210,29 @@ export default function MessageInput({ channelId, onSend, allowMedia, allowVoice
 
   return (
     <div className="border-t border-[var(--color-border)] bg-[var(--color-bg-base)] px-4 py-3 relative">
+      {/* Reply banner */}
+      {replyTarget && (
+        <div className="flex items-center gap-2 mb-2 px-3 py-1.5 rounded-lg bg-[var(--color-bg-elevated)] border-l-2 border-[var(--color-accent)] text-xs">
+          <span className="text-[var(--color-text-muted)] shrink-0">
+            {t("chat.reply.banner").replace("{nickname}", replyTarget.nickname)}
+          </span>
+          <span className="flex-1 min-w-0 truncate text-[var(--color-text-secondary)]">
+            {replyTarget.type === "image" ? "🖼 图片" :
+             replyTarget.type === "audio" ? "🎤 语音" :
+             replyTarget.type === "video" ? "🎬 视频" :
+             replyTarget.content || "(空)"}
+          </span>
+          <button
+            type="button"
+            onClick={onClearReply}
+            className="p-0.5 rounded hover:bg-[var(--color-bg-hover)] text-[var(--color-text-muted)] hover:text-[var(--color-text-secondary)]"
+            aria-label={t("chat.reply.cancel")}
+            title={t("chat.reply.cancel")}
+          >
+            <X size={12} />
+          </button>
+        </div>
+      )}
       {/* Uploaded media previews */}
       {uploadedMedia.length > 0 && (
         <div className="flex gap-2 mb-3 flex-wrap">

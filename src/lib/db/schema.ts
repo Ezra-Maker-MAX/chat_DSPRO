@@ -71,6 +71,11 @@ export const messages = sqliteTable("messages", {
   userId: text("user_id").notNull().references(() => users.id),
   content: text("content").default(""),
   type: text("type").default("text"), // "text" | "image" | "audio" | "video" | "system"
+  /** Id of the message this one is replying to (null = top-level). */
+  replyToId: text("reply_to_id"),
+  /** User id this message is addressed to. When this points at a bot
+   *  user (role='bot' / id starts with 'bot_'), the bot will reply. */
+  targetUserId: text("target_user_id"),
   editedAt: text("edited_at"),
   createdAt: text("created_at").default(sql`(datetime('now'))`),
 });

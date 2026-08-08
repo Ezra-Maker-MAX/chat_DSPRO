@@ -289,9 +289,23 @@ export default function RoleplayHub() {
           slot,
         }),
       });
-      const data = await res.json();
-      if (data.error) {
-        setAvatarError(data.hint ? `${data.error} — ${data.hint}` : data.error);
+      // Read raw text first so non-JSON errors (Vercel cold-start page,
+      // gateway HTML error, etc.) surface to the user instead of being
+      // swallowed by a JSON.parse throw.
+      const text = await res.text();
+      let data: any = {};
+      try {
+        data = text ? JSON.parse(text) : {};
+      } catch {
+        /* leave data empty; fall through to status-based message */
+      }
+      if (!res.ok || data.error) {
+        const raw = data.error || text || `HTTP ${res.status}`;
+        const policyHit = /content[- ]?policy|safety|moderation|\bblocked\b/i.test(String(raw));
+        setAvatarError(
+          (data.hint ? `${raw} — ${data.hint}` : raw) +
+            (policyHit ? `（${t("rp.error.policyHint")}）` : "")
+        );
         return;
       }
       if (slot === "avatar") {
@@ -303,8 +317,11 @@ export default function RoleplayHub() {
           emotes: f.emotes.map((u, idx) => (idx === i ? data.url : u)),
         }));
       }
-    } catch {
-      setAvatarError(t("rp.error.avatar"));
+    } catch (e: any) {
+      // Last-resort: network failure or non-text response. Surface whatever
+      // we can so the user can tell "no internet" from "API rejected prompt".
+      const msg = e?.message || String(e);
+      setAvatarError(t("rp.error.avatar") + (msg ? ` — ${msg}` : ""));
     } finally {
       setAvatarLoading(false);
     }
@@ -343,9 +360,20 @@ export default function RoleplayHub() {
         })
       );
       const res = await fetch("/api/characters/avatar/upload", { method: "POST", body: fd });
-      const data = await res.json();
-      if (data.error) {
-        setAvatarError(data.hint ? `${data.error} — ${data.hint}` : data.error);
+      const text = await res.text();
+      let data: any = {};
+      try {
+        data = text ? JSON.parse(text) : {};
+      } catch {
+        /* leave data empty; fall through to status-based message */
+      }
+      if (!res.ok || data.error) {
+        const raw = data.error || text || `HTTP ${res.status}`;
+        const policyHit = /content[- ]?policy|safety|moderation|\bblocked\b/i.test(String(raw));
+        setAvatarError(
+          (data.hint ? `${raw} — ${data.hint}` : raw) +
+            (policyHit ? `（${t("rp.error.policyHint")}）` : "")
+        );
         return;
       }
       if (slot === "avatar") {
@@ -357,8 +385,11 @@ export default function RoleplayHub() {
           emotes: f.emotes.map((u, idx) => (idx === i ? data.url : u)),
         }));
       }
-    } catch {
-      setAvatarError(t("rp.error.avatar"));
+    } catch (e: any) {
+      // Last-resort: network failure or non-text response. Surface whatever
+      // we can so the user can tell "no internet" from "API rejected prompt".
+      const msg = e?.message || String(e);
+      setAvatarError(t("rp.error.avatar") + (msg ? ` — ${msg}` : ""));
     } finally {
       setAvatarLoading(false);
     }

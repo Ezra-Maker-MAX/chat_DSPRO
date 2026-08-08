@@ -7,6 +7,7 @@ import {
   appendSessionMessages,
   generateCharacterReply,
 } from "@/lib/roleplay";
+import { detectEmotion } from "@/lib/emotion";
 
 /**
  * POST /api/roleplay/chat
@@ -64,6 +65,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({
       success: true,
       reply,
+      emotion: detectEmotion(reply),
       firstMes,
       sessionId: rpSession.id,
     });

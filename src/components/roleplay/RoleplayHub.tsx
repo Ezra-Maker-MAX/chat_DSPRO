@@ -227,6 +227,19 @@ export default function RoleplayHub() {
       const data = await res.json();
       if (typeof data.reply === "string" && data.reply) {
         setChat((prev) => [...prev, { role: "assistant", content: data.reply }]);
+        // Auto-switch the expression when the model's reply carries an emotion cue
+        // (slot convention: 0=neutral 1=happy 2=angry 3=dazed). Only switch if that
+        // slot actually has an image; otherwise keep the current expression.
+        const slotByEmotion: Record<string, number> = {
+          happy: 1,
+          angry: 2,
+          dazed: 3,
+          neutral: 0,
+        };
+        const target = slotByEmotion[data.emotion as string];
+        if (typeof target === "number" && activeCard.emotes?.[target]) {
+          setActiveEmoteIdx(target);
+        }
       } else if (data.error) {
         setChat((prev) => [...prev, { role: "assistant", content: `⚠️ ${data.error}` }]);
       }

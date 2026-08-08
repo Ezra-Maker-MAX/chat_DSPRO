@@ -53,6 +53,35 @@ function AvatarBox({ url, className }: { url: string | null | undefined; classNa
   );
 }
 
+/**
+ * Card-game cover: the portrait fills the card face. Without a portrait it
+ * falls back to a big initial on a glowing gradient — reads like a real card.
+ * Must be placed inside a `relative overflow-hidden` container with a fixed ratio.
+ */
+function CardCover({ url, name }: { url: string | null | undefined; name: string }) {
+  const [failed, setFailed] = useState(false);
+  const initial = (name || "?").charAt(0).toUpperCase();
+  if (url && !failed) {
+    return (
+      <img
+        src={url}
+        alt=""
+        className="absolute inset-0 h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
+        onError={() => setFailed(true)}
+      />
+    );
+  }
+  return (
+    <div className="absolute inset-0 flex items-center justify-center overflow-hidden bg-gradient-to-br from-[var(--color-bg-elevated)] via-[var(--color-bg-card)] to-[var(--color-bg-deep)]">
+      <div className="absolute -right-10 -top-10 h-44 w-44 rounded-full bg-[var(--color-accent-muted)] blur-2xl" />
+      <div className="absolute -bottom-12 -left-10 h-44 w-44 rounded-full bg-[var(--color-teal-muted)] blur-2xl" />
+      <span className="relative select-none font-[family-name:var(--font-display)] text-4xl font-bold text-[var(--color-text-secondary)]">
+        {initial}
+      </span>
+    </div>
+  );
+}
+
 interface WorldBook {
   id: string;
   name: string;
@@ -648,58 +677,76 @@ export default function RoleplayHub() {
             </p>
           </div>
         ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
             {cards.map((card) => (
-              <div key={card.id} className="glass-card p-4 group flex flex-col">
-                <div className="flex items-start gap-3 mb-2">
-                  <AvatarBox url={card.avatarUrl} className="w-10 h-10 rounded-xl shrink-0" />
-                  <div className="flex-1 min-w-0">
-                    <h3 className="font-medium text-sm truncate">{card.name}</h3>
-                    <p className="text-[11px] text-[var(--color-text-muted)] truncate">
-                      {card.worldBookId ? (
-                        <span className="inline-flex items-center gap-1 text-[var(--color-teal)]">
-                          <BookOpen size={10} /> {t("rp.worldBookAttached")}
-                        </span>
-                      ) : (
-                        t("rp.noWorldBook")
-                      )}
-                    </p>
-                  </div>
-                  <div className="flex items-center gap-0.5">
+              <div
+                key={card.id}
+                className="group relative flex flex-col overflow-hidden rounded-2xl border border-[var(--color-border)] bg-[var(--color-bg-card)] transition-all duration-300 hover:-translate-y-1.5 hover:border-[var(--color-accent)]/50 hover:shadow-[0_18px_44px_-14px_rgba(108,92,231,0.45)]"
+              >
+                {/* Cover — the portrait is the card face */}
+                <div className="relative aspect-[4/5] w-full overflow-hidden">
+                  <CardCover url={card.avatarUrl} name={card.name} />
+
+                  {/* Lore badge — top-left chip */}
+                  <span
+                    className={`absolute left-2.5 top-2.5 inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-medium backdrop-blur ${
+                      card.worldBookId
+                        ? "bg-black/50 text-[var(--color-teal)]"
+                        : "bg-black/40 text-[var(--color-text-muted)]"
+                    }`}
+                  >
+                    {card.worldBookId ? (
+                      <>
+                        <BookOpen size={10} /> {t("rp.worldBookAttached")}
+                      </>
+                    ) : (
+                      t("rp.noWorldBook")
+                    )}
+                  </span>
+
+                  {/* Actions — top-right, fade in on hover */}
+                  <div className="absolute right-2 top-2 flex items-center gap-1 opacity-0 transition-opacity duration-200 group-hover:opacity-100">
                     <button
                       onClick={() => startEdit(card)}
-                      className="p-1.5 rounded-lg text-[var(--color-text-muted)] hover:text-[var(--color-teal)] hover:bg-[var(--color-bg-hover)] opacity-0 group-hover:opacity-100 transition-all"
+                      className="rounded-lg bg-black/50 p-1.5 text-white/80 backdrop-blur transition-colors hover:bg-black/70 hover:text-white"
                       title={t("rp.edit")}
                     >
-                      <Pencil size={14} />
+                      <Pencil size={13} />
                     </button>
                     <a
                       href={`/api/characters/${card.id}/export`}
                       download
-                      className="p-1.5 rounded-lg text-[var(--color-text-muted)] hover:text-[var(--color-teal)] hover:bg-[var(--color-bg-hover)] opacity-0 group-hover:opacity-100 transition-all"
+                      className="rounded-lg bg-black/50 p-1.5 text-white/80 backdrop-blur transition-colors hover:bg-black/70 hover:text-white"
                       title={t("rp.export.png")}
                     >
-                      <Download size={14} />
+                      <Download size={13} />
                     </a>
                     <button
                       onClick={() => deleteCard(card.id)}
-                      className="p-1.5 rounded-lg text-[var(--color-text-muted)] hover:text-[var(--color-danger)] hover:bg-[var(--color-bg-hover)] opacity-0 group-hover:opacity-100 transition-all"
+                      className="rounded-lg bg-black/50 p-1.5 text-white/80 backdrop-blur transition-colors hover:bg-[var(--color-danger)] hover:text-white"
                       title="Delete"
                     >
-                      <Trash2 size={14} />
+                      <Trash2 size={13} />
                     </button>
                   </div>
                 </div>
-                <p className="text-xs text-[var(--color-text-secondary)] line-clamp-2 flex-1 mb-3">
-                  {card.description || t("rp.empty")}
-                </p>
-                <button
-                  onClick={() => openChat(card)}
-                  className="w-full flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg bg-[var(--color-teal-muted)] text-[var(--color-teal)] text-xs font-medium hover:bg-[var(--color-teal)] hover:text-[var(--color-bg-deep)] transition-colors"
-                >
-                  <KeyRound size={12} />
-                  {t("rp.talkTo", { name: card.name })}
-                </button>
+
+                {/* Body */}
+                <div className="flex flex-col gap-1 p-3">
+                  <h3 className="truncate font-[family-name:var(--font-display)] text-sm font-bold leading-tight">
+                    {card.name}
+                  </h3>
+                  <p className="line-clamp-1 text-[11px] text-[var(--color-text-secondary)]">
+                    {card.description || t("rp.empty")}
+                  </p>
+                  <button
+                    onClick={() => openChat(card)}
+                    className="mt-1.5 flex w-full items-center justify-center gap-1.5 rounded-lg bg-[var(--color-teal-muted)] px-3 py-2 text-xs font-medium text-[var(--color-teal)] transition-colors hover:bg-[var(--color-teal)] hover:text-[var(--color-bg-deep)]"
+                  >
+                    <KeyRound size={12} />
+                    {t("rp.talkTo", { name: card.name })}
+                  </button>
+                </div>
               </div>
             ))}
           </div>

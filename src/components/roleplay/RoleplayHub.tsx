@@ -16,7 +16,7 @@ import {
   Download,
   Upload,
   Smile,
-  BookMark,
+  Bookmark,
   Check,
 } from "lucide-react";
 
@@ -538,7 +538,7 @@ export default function RoleplayHub() {
                 : "text-[var(--color-text-muted)] hover:bg-[var(--color-bg-hover)] hover:text-[var(--color-text-primary)]"
             }`}
           >
-            <BookMark size={16} />
+            <Bookmark size={16} />
           </button>
           <button
             onClick={() => setActiveCard(null)}

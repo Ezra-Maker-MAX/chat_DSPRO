@@ -21,6 +21,7 @@ export async function GET() {
       id: profile.id,
       name: profile.name,
       systemPrompt: profile.systemPrompt,
+      roleplaySystemPrompt: profile.roleplaySystemPrompt || "",
       isEnabled: profile.isEnabled,
       imageProvider: profile.imageProvider,
       imageModel: profile.imageModel,
@@ -52,6 +53,9 @@ export async function PUT(req: NextRequest) {
   }
   if (typeof body.systemPrompt === "string") {
     patch.systemPrompt = body.systemPrompt.slice(0, 4000);
+  }
+  if (typeof body.roleplaySystemPrompt === "string") {
+    patch.roleplaySystemPrompt = body.roleplaySystemPrompt.slice(0, 4000);
   }
   if (typeof body.isEnabled === "boolean") {
     patch.isEnabled = body.isEnabled;
@@ -89,6 +93,7 @@ export async function PUT(req: NextRequest) {
       id: updated.id,
       name: updated.name,
       systemPrompt: updated.systemPrompt,
+      roleplaySystemPrompt: updated.roleplaySystemPrompt || "",
       isEnabled: updated.isEnabled,
       imageProvider: updated.imageProvider,
       imageModel: updated.imageModel,

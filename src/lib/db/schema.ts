@@ -148,6 +148,10 @@ export const botProfiles = sqliteTable("bot_profiles", {
     "You are a helpful assistant inside an anonymous chat space. " +
     "You read the conversation and reply naturally. Keep replies concise."
   ),
+  /** Global "jailbreak"/breakout prompt applied to EVERY roleplay session in
+   *  this tenant (SillyTavern's global System Prompt). Prepend to the system
+   *  prompt before the character card's own system prompt. */
+  roleplaySystemPrompt: text("roleplay_system_prompt").default(""),
   isEnabled: integer("is_enabled", { mode: "boolean" }).default(true),
   // Image generation gateway settings
   imageProvider: text("image_provider"), // e.g. "openai" | "custom"
@@ -234,6 +238,11 @@ export const roleplaySessions = sqliteTable("roleplay_sessions", {
   characterId: text("character_id").notNull().references(() => characterCards.id),
   channelId: text("channel_id").references(() => channels.id),
   history: text("history").default("[]"), // JSON array of {role, content}
+  /** SillyTavern Author's Note — injected near the end of the chat for
+   *  strong recent-context control ("全局指令微调"). Empty = disabled. */
+  authorNote: text("author_note").default(""),
+  /** 0..4 — how many most-recent turns the note trails behind (3 = default). */
+  authorNoteDepth: integer("author_note_depth").default(3),
   createdAt: text("created_at").default(sql`(datetime('now'))`),
   updatedAt: text("updated_at").default(sql`(datetime('now'))`),
 });

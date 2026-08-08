@@ -136,6 +136,7 @@ export const INIT_SQL = [
     name TEXT NOT NULL DEFAULT 'Chatmosphere Bot',
     avatar_seed TEXT NOT NULL DEFAULT 'bot',
     system_prompt TEXT DEFAULT 'You are a helpful assistant inside an anonymous chat space. You read the conversation and reply naturally. Keep replies concise.',
+    roleplay_system_prompt TEXT DEFAULT '',
     is_enabled INTEGER DEFAULT 1,
     image_provider TEXT,
     image_model TEXT,
@@ -145,6 +146,7 @@ export const INIT_SQL = [
     last_image_at TEXT,
     created_at TEXT DEFAULT (datetime('now'))
   )`,
+  `ALTER TABLE bot_profiles ADD COLUMN roleplay_system_prompt TEXT DEFAULT ''`,
   `CREATE UNIQUE INDEX IF NOT EXISTS bot_tenant_unique ON bot_profiles(tenant_id)`,
 
   `CREATE TABLE IF NOT EXISTS bot_image_jobs (
@@ -228,9 +230,13 @@ export const INIT_SQL = [
     character_id TEXT NOT NULL REFERENCES character_cards(id),
     channel_id TEXT REFERENCES channels(id),
     history TEXT DEFAULT '[]',
+    author_note TEXT DEFAULT '',
+    author_note_depth INTEGER DEFAULT 3,
     created_at TEXT DEFAULT (datetime('now')),
     updated_at TEXT DEFAULT (datetime('now'))
   )`,
+  `ALTER TABLE roleplay_sessions ADD COLUMN author_note TEXT DEFAULT ''`,
+  `ALTER TABLE roleplay_sessions ADD COLUMN author_note_depth INTEGER DEFAULT 3`,
 
   // Seed: default demo tenant
   `INSERT OR IGNORE INTO tenants (id, name, slug, invite_code, description, max_members, allow_media, allow_voice, allow_video)

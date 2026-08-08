@@ -3,6 +3,7 @@ import { eq, and, asc } from "drizzle-orm";
 import { generateId } from "@/lib/utils";
 import { generateText } from "ai";
 import { getModelForTenant } from "@/lib/llm-gateway";
+import { ensureBotProfile } from "./bot";
 
 // ============================================================
 // Character Cards + World Books (SillyTavern-style roleplay)
@@ -419,6 +420,38 @@ export async function getSessionHistory(sessionId: string): Promise<ChatMessage[
   }
 }
 
+/** Get the Author's Note (SillyTavern) for a session — text + depth. */
+export async function getAuthorNote(
+  sessionId: string
+): Promise<{ note: string; depth: number }> {
+  const [session] = await db
+    .select()
+    .from(schema.roleplaySessions)
+    .where(eq(schema.roleplaySessions.id, sessionId))
+    .limit(1);
+  return {
+    note: session?.authorNote || "",
+    depth: session?.authorNoteDepth ?? 3,
+  };
+}
+
+/** Persist the Author's Note for a session. */
+export async function setAuthorNote(
+  sessionId: string,
+  note: string,
+  depth: number
+) {
+  const clampedDepth = Math.min(4, Math.max(0, Number(depth) || 3));
+  await db
+    .update(schema.roleplaySessions)
+    .set({
+      authorNote: (note || "").slice(0, 2000),
+      authorNoteDepth: clampedDepth,
+      updatedAt: new Date().toISOString(),
+    })
+    .where(eq(schema.roleplaySessions.id, sessionId));
+}
+
 export async function appendSessionMessages(
   sessionId: string,
   messages: ChatMessage[]
@@ -443,6 +476,10 @@ export async function generateCharacterReply(params: {
   history: ChatMessage[];
   userTurn: string;
   characterName?: string;
+  /** SillyTavern Author's Note — optional strong recent-context control. */
+  authorNote?: string;
+  /** 0..4 — the note is injected after the N most-recent turns (3 = default). */
+  authorNoteDepth?: number;
 }): Promise<string> {
   const { tenantId, card, worldBook, history, userTurn } = params;
 
@@ -475,7 +512,22 @@ export async function generateCharacterReply(params: {
       : "";
 
   const characterName = card.name;
+
+  // Layer 1 — 全局核心破限: tenant-level global jailbreak prepended to the
+  // system prompt (SillyTavern's global System Prompt). Falls back to nothing
+  // when unset.
+  let globalRoleplayPrompt = "";
+  try {
+    const profile = await ensureBotProfile(tenantId);
+    globalRoleplayPrompt = (profile.roleplaySystemPrompt || "").trim();
+  } catch {
+    // profile missing — degrade gracefully, no global prompt
+  }
+
   const systemPrompt = [
+    // Global jailbreak / breakout first (highest priority override)
+    globalRoleplayPrompt ? `[GLOBAL DIRECTIVE — applies to everything below]\n${globalRoleplayPrompt}` : "",
+    // Character-card system prompt (Layer 1, per-card)
     card.systemPrompt || `You are ${characterName}. Stay in character at all times.`,
     // Lorebook BEFORE character definitions
     beforeCharEntries.length > 0
@@ -503,6 +555,26 @@ export async function generateCharacterReply(params: {
     ...history,
     { role: "user", content: userTurn },
   ];
+
+  // Layer 3 — 全局指令微调 (Author's Note): inject a directive near the end
+  // of the chat for strong recent-context control. depth=0 → right before the
+  // user's current turn; depth=N → N turns back from the end (SillyTavern
+  // semantics). Only injected when a note is set.
+  //
+  // role: we use a distinct "user"-role message with an explicit directive
+  // label instead of mid-chat "system" — Anthropic & Gemini reject system
+  // messages outside the first slot, and "assistant" would pollute the
+  // character's voice. The model sees it as OOC guidance.
+  const note = (params.authorNote || "").trim();
+  if (note) {
+    const depth = Math.min(4, Math.max(0, Number(params.authorNoteDepth) ?? 3));
+    // Insert BEFORE the userTurn so the note is a directive, not dialogue.
+    const insertAt = Math.max(0, messages.length - 1 - depth);
+    messages.splice(insertAt, 0, {
+      role: "user",
+      content: `[Author's Note — OOC directive, follow closely]\n${note}`,
+    });
+  }
 
   const { text } = await generateText({
     model: routed.provider.model(routed.provider.modelId),

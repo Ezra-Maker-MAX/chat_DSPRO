@@ -16,6 +16,8 @@ import {
   Download,
   Upload,
   Smile,
+  BookMark,
+  Check,
 } from "lucide-react";
 
 interface CharacterCard {
@@ -133,6 +135,11 @@ export default function RoleplayHub() {
   const [chat, setChat] = useState<ChatMsg[]>([]);
   const [input, setInput] = useState("");
   const [sending, setSending] = useState(false);
+  // Author's Note (SillyTavern 全局指令微调) — per-session
+  const [authorNote, setAuthorNote] = useState("");
+  const [authorNoteDepth, setAuthorNoteDepth] = useState(3);
+  const [authorNoteOpen, setAuthorNoteOpen] = useState(false);
+  const [authorNoteSaving, setAuthorNoteSaving] = useState(false);
   const chatEndRef = useRef<HTMLDivElement>(null);
 
   /** Parse the API's JSON-encoded `emotes` column into a 4-slot array. */
@@ -214,6 +221,9 @@ export default function RoleplayHub() {
       if (data.history) {
         setChat(data.history);
       }
+      // Author's Note (SillyTavern 全局指令微调) — per-session
+      setAuthorNote(data.authorNote || "");
+      setAuthorNoteDepth(data.authorNoteDepth ?? 3);
       // Seed first message if fresh session
       if (data.card?.firstMes && (!data.history || data.history.length === 0)) {
         setChat([{ role: "assistant", content: data.card.firstMes }]);
@@ -222,6 +232,26 @@ export default function RoleplayHub() {
       setError(t("rp.error.session"));
     } finally {
       setSending(false);
+    }
+  };
+
+  const saveAuthorNote = async () => {
+    if (!activeCard) return;
+    setAuthorNoteSaving(true);
+    try {
+      await fetch("/api/roleplay/chat", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          characterId: activeCard.id,
+          authorNote,
+          authorNoteDepth,
+        }),
+      });
+    } catch {
+      /* non-fatal — note simply won't persist */
+    } finally {
+      setAuthorNoteSaving(false);
     }
   };
 
@@ -499,12 +529,68 @@ export default function RoleplayHub() {
             </p>
           </div>
           <button
+            type="button"
+            onClick={() => setAuthorNoteOpen((v) => !v)}
+            title={t("rp.authorNote.title")}
+            className={`p-2 rounded-lg transition-colors ${
+              authorNoteOpen || authorNote
+                ? "text-[var(--color-accent-glow)] bg-[var(--color-bg-hover)]"
+                : "text-[var(--color-text-muted)] hover:bg-[var(--color-bg-hover)] hover:text-[var(--color-text-primary)]"
+            }`}
+          >
+            <BookMark size={16} />
+          </button>
+          <button
             onClick={() => setActiveCard(null)}
             className="p-2 rounded-lg text-[var(--color-text-muted)] hover:bg-[var(--color-bg-hover)] hover:text-[var(--color-text-primary)] transition-colors"
           >
             <X size={16} />
           </button>
         </div>
+
+        {/* Author's Note panel (SillyTavern 全局指令微调) */}
+        {authorNoteOpen && (
+          <div className="border-b border-[var(--color-border)] px-4 py-3 bg-[var(--color-bg-deep)]/40 space-y-2">
+            <div className="flex items-center justify-between">
+              <span className="text-[10px] uppercase tracking-wider text-[var(--color-text-muted)]">
+                {t("rp.authorNote.title")}
+              </span>
+              <span className="text-[10px] text-[var(--color-text-muted)]">
+                {t("rp.authorNote.hint")}
+              </span>
+            </div>
+            <textarea
+              value={authorNote}
+              onChange={(e) => setAuthorNote(e.target.value)}
+              rows={3}
+              placeholder={t("rp.authorNote.ph")}
+              className="w-full bg-[var(--color-bg-input)] border border-[var(--color-border)] rounded-lg px-3 py-2 text-xs resize-none focus:outline-none focus:border-[var(--color-accent)]"
+            />
+            <div className="flex items-center gap-3">
+              <label className="flex items-center gap-2 text-[11px] text-[var(--color-text-secondary)]">
+                {t("rp.authorNote.depth")}
+                <input
+                  type="range"
+                  min={0}
+                  max={4}
+                  value={authorNoteDepth}
+                  onChange={(e) => setAuthorNoteDepth(Number(e.target.value))}
+                  className="accent-[var(--color-accent)] w-28"
+                />
+                <span className="text-[var(--color-accent-glow)] font-mono">{authorNoteDepth}</span>
+              </label>
+              <button
+                type="button"
+                onClick={saveAuthorNote}
+                disabled={authorNoteSaving}
+                className="ml-auto flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[var(--color-accent)] text-white text-xs font-medium hover:bg-[var(--color-accent-glow)] disabled:opacity-40 transition-colors"
+              >
+                {authorNoteSaving ? <Loader2 size={12} className="animate-spin" /> : <Check size={12} />}
+                {authorNoteSaving ? t("rp.saving") : t("rp.save")}
+              </button>
+            </div>
+          </div>
+        )}
 
         {/* Expression emote strip — click to swap the avatar above */}
         {activeCard.emotes && activeCard.emotes.some(Boolean) && (
@@ -719,6 +805,9 @@ export default function RoleplayHub() {
                   rows={2}
                   className="w-full bg-[var(--color-bg-input)] border border-[var(--color-border)] rounded-lg px-3 py-2 text-sm resize-none focus:outline-none focus:border-[var(--color-accent)]"
                 />
+                <p className="text-[10px] text-[var(--color-text-muted)] mt-1">
+                  {t("rp.systemPrompt.hint")}
+                </p>
               </div>
               <div>
                 <label className="block text-xs text-[var(--color-text-muted)] mb-1">{t("rp.worldBook")}</label>

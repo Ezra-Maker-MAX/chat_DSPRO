@@ -9,6 +9,7 @@ interface BotProfile {
   id: string;
   name: string;
   systemPrompt: string;
+  roleplaySystemPrompt: string;
   isEnabled: boolean;
   imageProvider: string | null;
   imageModel: string | null;
@@ -29,6 +30,7 @@ export default function BotSettings() {
   // Form state
   const [name, setName] = useState("");
   const [systemPrompt, setSystemPrompt] = useState("");
+  const [roleplaySystemPrompt, setRoleplaySystemPrompt] = useState("");
   const [isEnabled, setIsEnabled] = useState(true);
   const [imageProvider, setImageProvider] = useState("openai");
   const [imageModel, setImageModel] = useState("gpt-image-1");
@@ -45,6 +47,7 @@ export default function BotSettings() {
           setProfile(p);
           setName(p.name);
           setSystemPrompt(p.systemPrompt || "");
+          setRoleplaySystemPrompt(p.roleplaySystemPrompt || "");
           setIsEnabled(p.isEnabled);
           setImageProvider(p.imageProvider || "openai");
           setImageModel(p.imageModel || "gpt-image-1");
@@ -64,6 +67,7 @@ export default function BotSettings() {
       const body: Record<string, unknown> = {
         name,
         systemPrompt,
+        roleplaySystemPrompt,
         isEnabled,
         imageProvider,
         imageModel,
@@ -149,6 +153,21 @@ export default function BotSettings() {
             className="w-full bg-[var(--color-bg-input)] border border-[var(--color-border)] rounded-lg px-3 py-2 text-xs resize-none focus:outline-none focus:border-[var(--color-accent)]"
             placeholder={t("bot.systemPrompt.ph")}
           />
+        </div>
+        <div>
+          <label className="block text-[10px] font-medium text-[var(--color-text-muted)] uppercase mb-1">
+            {t("bot.roleplayPrompt")}
+          </label>
+          <textarea
+            value={roleplaySystemPrompt}
+            onChange={(e) => setRoleplaySystemPrompt(e.target.value)}
+            rows={3}
+            className="w-full bg-[var(--color-bg-input)] border border-[var(--color-border)] rounded-lg px-3 py-2 text-xs resize-none focus:outline-none focus:border-[var(--color-accent)]"
+            placeholder={t("bot.roleplayPrompt.ph")}
+          />
+          <p className="mt-1 text-[10px] text-[var(--color-text-muted)] leading-relaxed">
+            {t("bot.roleplayPrompt.hint")}
+          </p>
         </div>
       </div>
 

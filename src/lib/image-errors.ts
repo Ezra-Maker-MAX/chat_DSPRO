@@ -36,7 +36,8 @@ export function humanizeImageError(raw: string): HumanizedImageError {
         return {
           code,
           message: "提示词被内容审核拒绝",
-          hint: "换个更通用、避免敏感词的描述再试（例如去掉露骨的身体描写、特定人物/品牌名等）。",
+          hint:
+            "最常见原因是点名了受版权保护的角色（动漫/影视/明星角色名，如 Frieren）。解决办法：去掉角色原名，改用特征描述（petite elf, silver-white long hair），或换用不过滤版权的网关（设置 → Bot）。",
           raw: text,
         };
       }

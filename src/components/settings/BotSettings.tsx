@@ -169,6 +169,21 @@ export default function BotSettings() {
             {t("bot.roleplayPrompt.hint")}
           </p>
         </div>
+        <button
+          type="button"
+          onClick={save}
+          disabled={saving}
+          className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[var(--color-accent)] text-white text-xs font-medium hover:bg-[var(--color-accent-glow)] transition-colors"
+        >
+          {saving ? (
+            <Loader2 size={12} className="animate-spin" />
+          ) : saved ? (
+            <Check size={12} />
+          ) : (
+            <Save size={12} />
+          )}
+          {saving ? t("bot.saving") : saved ? t("bot.saved") : t("bot.save")}
+        </button>
       </div>
 
       {/* Image gateway */}

@@ -154,7 +154,10 @@ export default function RoleplayHub() {
     // Load characters — never let world-book failure block this.
     try {
       const cardsRes = await fetch("/api/characters");
-      const cardsData = await cardsRes.json();
+      const cardsData = await cardsRes.json().catch(() => ({} as any));
+      if (!cardsRes.ok || cardsData.error) {
+        throw new Error(cardsData.error || `HTTP ${cardsRes.status}`);
+      }
       const rawCards = (cardsData.cards || []) as any[];
       setCards(
         rawCards.map((c) => ({
@@ -163,22 +166,32 @@ export default function RoleplayHub() {
         }))
       );
       cardsOk = true;
-    } catch {
-      errors.push("characters");
+    } catch (e) {
+      errors.push(`characters: ${e instanceof Error ? e.message : "unknown"}`);
     }
 
     // Load world books — independent failure, don't kill character list.
     try {
       const booksRes = await fetch("/api/worldbooks");
-      const booksData = await booksRes.json();
-      setBooks(booksData.books || []);
+      const booksData = await booksRes.json().catch(() => ({} as any));
+      if (!booksRes.ok || booksData.error) {
+        throw new Error(booksData.error || `HTTP ${booksRes.status}`);
+      }
+      setBooks(booksData.cards || booksData.books || []);
       booksOk = true;
-    } catch {
-      errors.push("worldbooks");
+    } catch (e) {
+      errors.push(`worldbooks: ${e instanceof Error ? e.message : "unknown"}`);
     }
 
-    if (!cardsOk) setError(t("rp.error.load"));
-    else if (errors.length > 0) console.warn("[RoleplayHub] Partial load failed:", errors.join(", "));
+    if (!cardsOk) {
+      const detail = errors.find((e) => e.startsWith("characters:")) || "";
+      const isSchema = /no such column|no such table|database/i.test(detail);
+      setError(
+        isSchema
+          ? `${t("rp.error.load")} (${detail}) — ${t("rp.error.migrateHint")}`
+          : `${t("rp.error.load")}${detail ? " — " + detail : ""}`
+      );
+    } else if (errors.length > 0) console.warn("[RoleplayHub] Partial load failed:", errors.join(", "));
     setLoading(false);
   }, [t]);
 

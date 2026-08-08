@@ -29,8 +29,10 @@ export async function GET() {
   if (!session) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
-  const cards = await listCharacterCards(session.tenantId);
-  return NextResponse.json({ cards });
+  const cards = await listCharacterCards(session.tenantId, session.role);
+  // Expose the caller's role so the frontend can show/hide the visibility
+  // control and the "admin only" badge without an extra request.
+  return NextResponse.json({ cards, role: session.role || "member" });
 }
 
 export async function POST(req: NextRequest) {
@@ -77,6 +79,11 @@ export async function POST(req: NextRequest) {
     worldBookId: body.worldBookId || null,
     avatarUrl: body.avatarUrl || null,
     emotes: normalizeEmotes(body.emotes),
+    // Only admins may create admin-only cards; everyone else stays public.
+    visibility:
+      session.role === "admin" && body.visibility === "admin_only"
+        ? "admin_only"
+        : "public",
   });
 
   return NextResponse.json({ success: true, id });
@@ -146,6 +153,13 @@ export async function PATCH(req: NextRequest) {
     worldBookId: body.worldBookId || null,
     avatarUrl: body.avatarUrl || null,
     emotes: normalizeEmotes(body.emotes),
+    // Only admins may flip a card to admin_only; members keep current value.
+    visibility:
+      session.role === "admin"
+        ? body.visibility === "admin_only"
+          ? "admin_only"
+          : "public"
+        : undefined,
   }, id);
 
   return NextResponse.json({ success: true, id });

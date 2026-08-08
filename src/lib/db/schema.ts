@@ -197,6 +197,7 @@ export const characterCards = sqliteTable("character_cards", {
   avatarUrl: text("avatar_url"),
   emotes: text("emotes").default("[]"), // JSON array of 4 expression URLs (matches tavern Expression Media)
   worldBookId: text("world_book_id").references(() => worldBooks.id),
+  visibility: text("visibility").default("public"), // "public" | "admin_only" — admin_only hides the card from non-admins
   isActive: integer("is_active", { mode: "boolean" }).default(true),
   createdAt: text("created_at").default(sql`(datetime('now'))`),
   updatedAt: text("updated_at").default(sql`(datetime('now'))`),

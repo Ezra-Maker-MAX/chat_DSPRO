@@ -33,6 +33,7 @@ interface CharacterCard {
   worldBookId: string | null;
   avatarUrl: string | null;
   emotes: (string | null)[];
+  visibility?: "public" | "admin_only";
 }
 
 /** Avatar thumbnail that falls back to the gradient Bot icon on missing/broken URL. */
@@ -107,6 +108,7 @@ const DEFAULT_FIELDS = {
   postHistoryInstructions: "",
   avatarUrl: "",
   emotes: [null, null, null, null] as (string | null)[],
+  visibility: "public" as "public" | "admin_only",
 };
 
 export default function RoleplayHub() {
@@ -115,6 +117,7 @@ export default function RoleplayHub() {
   const [books, setBooks] = useState<WorldBook[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [currentRole, setCurrentRole] = useState<"admin" | "member">("member");
 
   // Card editor state
   const [editing, setEditing] = useState(false);
@@ -166,6 +169,9 @@ export default function RoleplayHub() {
         throw new Error(cardsData.error || `HTTP ${cardsRes.status}`);
       }
       const rawCards = (cardsData.cards || []) as any[];
+      if (cardsData.role === "admin" || cardsData.role === "member") {
+        setCurrentRole(cardsData.role);
+      }
       setCards(
         rawCards.map((c) => ({
           ...c,
@@ -475,6 +481,7 @@ export default function RoleplayHub() {
       emotes: card.emotes && card.emotes.length === 4
         ? card.emotes
         : parseEmotes(card.emotes),
+      visibility: card.visibility === "admin_only" ? "admin_only" : "public",
     });
     setAvatarPrompt("");
     setAvatarError("");
@@ -827,6 +834,41 @@ export default function RoleplayHub() {
                   {t("rp.worldBook.hint")}
                 </p>
               </div>
+              {/* Visibility — admin only. Hidden cards are invisible to non-admins. */}
+              {currentRole === "admin" && (
+                <div className="flex items-center justify-between rounded-lg border border-[var(--color-border)] px-3 py-2.5 bg-[var(--color-bg-input)]">
+                  <div className="flex-1 min-w-0">
+                    <label className="block text-xs text-[var(--color-text-secondary)]">
+                      {t("rp.visibility.title")}
+                    </label>
+                    <p className="text-[10px] text-[var(--color-text-muted)] mt-0.5">
+                      {t("rp.visibility.hint")}
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    role="switch"
+                    aria-checked={form.visibility === "admin_only"}
+                    onClick={() =>
+                      setForm((f) => ({
+                        ...f,
+                        visibility: f.visibility === "admin_only" ? "public" : "admin_only",
+                      }))
+                    }
+                    className={`relative h-6 w-11 shrink-0 rounded-full transition-colors ${
+                      form.visibility === "admin_only"
+                        ? "bg-[var(--color-accent)]"
+                        : "bg-[var(--color-bg-hover)]"
+                    }`}
+                  >
+                    <span
+                      className={`absolute top-0.5 h-5 w-5 rounded-full bg-white shadow transition-all ${
+                        form.visibility === "admin_only" ? "left-[22px]" : "left-0.5"
+                      }`}
+                    />
+                  </button>
+                </div>
+              )}
               <div>
                 <label className="block text-xs text-[var(--color-text-muted)] mb-1">{t("rp.avatar")}</label>
                 <div className="flex items-start gap-3">
@@ -1027,6 +1069,13 @@ export default function RoleplayHub() {
                       t("rp.noWorldBook")
                     )}
                   </span>
+
+                  {/* Admin-only badge — top-left, below the lore chip */}
+                  {card.visibility === "admin_only" && (
+                    <span className="absolute left-2.5 top-9 inline-flex items-center gap-1 rounded-full bg-[var(--color-accent)]/90 px-2 py-0.5 text-[10px] font-medium text-white backdrop-blur">
+                      <KeyRound size={10} /> {t("rp.visibility.adminOnly")}
+                    </span>
+                  )}
 
                   {/* Actions — top-right, fade in on hover */}
                   <div className="absolute right-2 top-2 flex items-center gap-1 opacity-0 transition-opacity duration-200 group-hover:opacity-100">

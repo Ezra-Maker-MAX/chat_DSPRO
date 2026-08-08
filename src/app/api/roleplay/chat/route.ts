@@ -39,6 +39,10 @@ export async function POST(req: NextRequest) {
   if (!result) {
     return NextResponse.json({ error: "Character not found" }, { status: 404 });
   }
+  // Non-admins may not chat with admin-only cards (same defense as the list).
+  if (session.role !== "admin" && result.card.visibility === "admin_only") {
+    return NextResponse.json({ error: "Character not found" }, { status: 404 });
+  }
   const { card, worldBook } = result;
 
   const rpSession = await getOrCreateSession(session.tenantId, session.userId, characterId);
@@ -100,11 +104,17 @@ export async function GET(req: NextRequest) {
   const author = await getAuthorNote(rpSession.id);
 
   const result = await getCharacterCard(session.tenantId, characterId);
+  if (!result) {
+    return NextResponse.json({ error: "Character not found" }, { status: 404 });
+  }
+  if (session.role !== "admin" && result.card.visibility === "admin_only") {
+    return NextResponse.json({ error: "Character not found" }, { status: 404 });
+  }
   return NextResponse.json({
     sessionId: rpSession.id,
     history,
-    card: result?.card || null,
-    worldBook: result?.worldBook || null,
+    card: result.card,
+    worldBook: result.worldBook,
     authorNote: author.note,
     authorNoteDepth: author.depth,
   });

@@ -28,6 +28,11 @@ export async function GET(_req: NextRequest, { params }: Params) {
   if (!result) {
     return NextResponse.json({ error: "Character not found" }, { status: 404 });
   }
+  // Non-admins may not fetch admin-only cards (defense in depth — the list
+  // endpoint already hides them, but a direct GET must not leak them either).
+  if (session.role !== "admin" && result.card.visibility === "admin_only") {
+    return NextResponse.json({ error: "Character not found" }, { status: 404 });
+  }
   return NextResponse.json(result);
 }
 
@@ -77,6 +82,13 @@ export async function PUT(req: NextRequest, { params }: Params) {
       worldBookId: body.worldBookId || null,
       avatarUrl: body.avatarUrl || null,
       emotes: normalizeEmotes(body.emotes),
+      // Only admins may flip visibility; creators editing their own card keep it.
+      visibility:
+        session.role === "admin"
+          ? body.visibility === "admin_only"
+            ? "admin_only"
+            : "public"
+          : undefined,
     },
     id
   );

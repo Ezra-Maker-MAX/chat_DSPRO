@@ -27,6 +27,10 @@ export async function GET(_req: NextRequest, { params }: Params) {
   if (!result) {
     return NextResponse.json({ error: "Character not found" }, { status: 404 });
   }
+  // Non-admins may not export admin-only cards.
+  if (session.role !== "admin" && result.card.visibility === "admin_only") {
+    return NextResponse.json({ error: "Character not found" }, { status: 404 });
+  }
   const { card } = result;
 
   let worldBook: { book: any; entries: any[] } | null = null;

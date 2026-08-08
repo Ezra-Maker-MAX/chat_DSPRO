@@ -21,6 +21,7 @@ export interface CharacterCardInput {
   worldBookId?: string | null;
   avatarUrl?: string | null;
   emotes?: (string | null)[]; // 4-slot expression array (tavern Expression Media)
+  visibility?: "public" | "admin_only" | null; // null/undefined = leave as-is on update
 }
 
 export interface WorldBookEntryInput {
@@ -51,6 +52,9 @@ export async function saveCharacterCard(
     if (Array.isArray(input.emotes)) {
       updateFields.emotes = JSON.stringify(input.emotes);
     }
+    if (input.visibility === undefined || input.visibility === null) {
+      delete updateFields.visibility; // don't clobber existing visibility when not provided
+    }
     await db
       .update(schema.characterCards)
       .set(updateFields as any)
@@ -79,17 +83,30 @@ export async function saveCharacterCard(
     worldBookId: input.worldBookId || null,
     avatarUrl: input.avatarUrl || null,
     emotes: JSON.stringify(input.emotes ?? [null, null, null, null]),
+    visibility: input.visibility === "admin_only" ? "admin_only" : "public",
   });
   return id;
 }
 
-/** List character cards for a tenant. */
-export async function listCharacterCards(tenantId: string) {
-  return db
+/**
+ * List character cards for a tenant.
+ * Non-admins only see cards whose visibility is "public"; admins see everything.
+ */
+export async function listCharacterCards(tenantId: string, role?: string) {
+  const isAdmin = role === "admin";
+  const cards = await db
     .select()
     .from(schema.characterCards)
-    .where(eq(schema.characterCards.tenantId, tenantId))
+    .where(
+      isAdmin
+        ? eq(schema.characterCards.tenantId, tenantId)
+        : and(
+            eq(schema.characterCards.tenantId, tenantId),
+            eq(schema.characterCards.visibility, "public")
+          )
+    )
     .orderBy(asc(schema.characterCards.createdAt));
+  return cards;
 }
 
 /** Get one character card (with its world book). */

@@ -4,6 +4,12 @@ import { buildAndUploadAvatar } from "@/lib/chara-avatar";
 
 const ALLOWED = new Set(["image/png", "image/jpeg", "image/webp", "image/gif"]);
 
+type EmoteSlot = "avatar" | "0" | "1" | "2" | "3";
+function parseSlot(raw: unknown): EmoteSlot {
+  if (raw === "0" || raw === "1" || raw === "2" || raw === "3") return raw;
+  return "avatar";
+}
+
 /**
  * POST /api/characters/avatar/upload  (multipart/form-data)
  * Fields: file (image), card (JSON string of the card fields), cardId?
@@ -19,6 +25,7 @@ export async function POST(req: NextRequest) {
   const file = form.get("file");
   const cardRaw = form.get("card");
   const cardId = (form.get("cardId") as string) || undefined;
+  const slot: EmoteSlot = parseSlot(form.get("slot"));
 
   if (!(file instanceof File)) {
     return NextResponse.json({ error: "No image file provided" }, { status: 400 });
@@ -62,7 +69,8 @@ export async function POST(req: NextRequest) {
       },
       card.worldBookId,
       bytes,
-      cardId
+      cardId,
+      slot
     );
     return NextResponse.json({ url });
   } catch (e) {

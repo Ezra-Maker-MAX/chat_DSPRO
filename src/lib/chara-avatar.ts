@@ -22,13 +22,18 @@ export interface AvatarCardInput {
 /**
  * Embed chara_card_v2 metadata into the given image bytes and upload.
  * Returns the public Blob URL (this URL is itself importable by SillyTavern).
+ *
+ * `slot` distinguishes which part of the card this image represents:
+ *   - "avatar" (default) — the main card portrait
+ *   - "0".."3"          — an emote slot (stored under -emote-N suffix)
  */
 export async function buildAndUploadAvatar(
   tenantId: string,
   card: AvatarCardInput,
   worldBookId: string | null | undefined,
   imageBytes: Buffer,
-  cardId?: string
+  cardId?: string,
+  slot: "avatar" | "0" | "1" | "2" | "3" = "avatar"
 ): Promise<string> {
   let worldBook: { book: any; entries: any[] } | null = null;
   if (worldBookId) {
@@ -38,7 +43,8 @@ export async function buildAndUploadAvatar(
   const chara = buildCharaCardV2(card, worldBook);
   const png = embedCharaChunk(imageBytes, chara);
 
-  const path = `${tenantId}/char/${cardId || `tmp_${generateId(8)}`}.png`;
+  const suffix = slot === "avatar" ? "" : `-emote-${slot}`;
+  const path = `${tenantId}/char/${cardId || `tmp_${generateId(8)}`}${suffix}.png`;
   const blob = await put(path, png, {
     access: "public",
     contentType: "image/png",

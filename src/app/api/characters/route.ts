@@ -8,6 +8,17 @@ import {
 import { db, schema } from "@/lib/db";
 import { eq, and } from "drizzle-orm";
 
+/** Coerce incoming emotes into a length-4 (string|null)[]; pad/clip & filter URLs. */
+function normalizeEmotes(raw: unknown): (string | null)[] {
+  if (!Array.isArray(raw)) return [null, null, null, null];
+  const out: (string | null)[] = [];
+  for (let i = 0; i < 4; i++) {
+    const v = raw[i];
+    out.push(typeof v === "string" && v.length > 0 ? v : null);
+  }
+  return out;
+}
+
 /**
  * GET /api/characters — list character cards for the tenant
  * POST /api/characters — create a character card
@@ -65,6 +76,7 @@ export async function POST(req: NextRequest) {
     postHistoryInstructions: body.postHistoryInstructions,
     worldBookId: body.worldBookId || null,
     avatarUrl: body.avatarUrl || null,
+    emotes: normalizeEmotes(body.emotes),
   });
 
   return NextResponse.json({ success: true, id });
@@ -133,6 +145,7 @@ export async function PATCH(req: NextRequest) {
     postHistoryInstructions: body.postHistoryInstructions,
     worldBookId: body.worldBookId || null,
     avatarUrl: body.avatarUrl || null,
+    emotes: normalizeEmotes(body.emotes),
   }, id);
 
   return NextResponse.json({ success: true, id });

@@ -3,10 +3,17 @@ import { getSession } from "@/lib/auth";
 import { ensureBotProfile, generateImageBytes } from "@/lib/bot";
 import { buildAndUploadAvatar } from "@/lib/chara-avatar";
 
+type EmoteSlot = "avatar" | "0" | "1" | "2" | "3";
+
+function parseSlot(raw: unknown): EmoteSlot {
+  if (raw === "0" || raw === "1" || raw === "2" || raw === "3") return raw;
+  return "avatar";
+}
+
 /**
  * POST /api/characters/avatar/generate
- * Body: { name, description?, personality?, scenario?, firstMes?, mesExample?,
- *         systemPrompt?, postHistoryInstructions?, worldBookId?, prompt?, cardId? }
+ * Body: { name, description?, ..., worldBookId?, prompt?, cardId?, slot? }
+ * slot is "avatar" (default) or "0".."3" for an expression emote.
  * Generates a portrait via the tenant's image gateway, embeds the character
  * card (chara_card_v2) into the PNG, and returns the public URL.
  */
@@ -30,11 +37,17 @@ export async function POST(req: NextRequest) {
     );
   }
 
+  const slot: EmoteSlot = parseSlot(body.slot);
+
   // Use the user-provided prompt, else synthesise a portrait prompt from the card.
   const prompt =
     body.prompt?.trim() ||
     [
-      "character portrait, full-body friendly illustration",
+      slot === "avatar"
+        ? "character portrait, friendly illustration"
+        : `character expression, square headshot, ${
+            ["happy", "angry", "eating", "dazed"][Number(slot)] || "neutral"
+          } mood`,
       `subject: ${name}`,
       body.description || "",
       body.personality || "",
@@ -58,7 +71,8 @@ export async function POST(req: NextRequest) {
       },
       body.worldBookId,
       bytes,
-      body.cardId || undefined
+      body.cardId || undefined,
+      slot
     );
     return NextResponse.json({ url });
   } catch (e) {

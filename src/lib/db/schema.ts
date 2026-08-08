@@ -186,6 +186,7 @@ export const characterCards = sqliteTable("character_cards", {
   postHistoryInstructions: text("post_history_instructions").default(""),
   avatarSeed: text("avatar_seed").default("char"),
   avatarUrl: text("avatar_url"),
+  emotes: text("emotes").default("[]"), // JSON array of 4 expression URLs (matches tavern Expression Media)
   worldBookId: text("world_book_id").references(() => worldBooks.id),
   isActive: integer("is_active", { mode: "boolean" }).default(true),
   createdAt: text("created_at").default(sql`(datetime('now'))`),

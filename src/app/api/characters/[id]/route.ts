@@ -4,6 +4,17 @@ import { getCharacterCard, saveCharacterCard } from "@/lib/roleplay";
 import { db, schema } from "@/lib/db";
 import { eq, and } from "drizzle-orm";
 
+/** Coerce incoming emotes into a length-4 (string|null)[]; pad/clip & filter URLs. */
+function normalizeEmotes(raw: unknown): (string | null)[] {
+  if (!Array.isArray(raw)) return [null, null, null, null];
+  const out: (string | null)[] = [];
+  for (let i = 0; i < 4; i++) {
+    const v = raw[i];
+    out.push(typeof v === "string" && v.length > 0 ? v : null);
+  }
+  return out;
+}
+
 type Params = { params: Promise<{ id: string }> };
 
 /** GET /api/characters/[id] — single card + world book. */
@@ -65,6 +76,7 @@ export async function PUT(req: NextRequest, { params }: Params) {
       postHistoryInstructions: body.postHistoryInstructions,
       worldBookId: body.worldBookId || null,
       avatarUrl: body.avatarUrl || null,
+      emotes: normalizeEmotes(body.emotes),
     },
     id
   );

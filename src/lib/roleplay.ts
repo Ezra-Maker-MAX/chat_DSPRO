@@ -19,6 +19,7 @@ export interface CharacterCardInput {
   postHistoryInstructions?: string;
   worldBookId?: string | null;
   avatarUrl?: string | null;
+  emotes?: (string | null)[]; // 4-slot expression array (tavern Expression Media)
 }
 
 export interface WorldBookEntryInput {
@@ -45,9 +46,13 @@ export async function saveCharacterCard(
   const now = new Date().toISOString();
 
   if (cardId) {
+    const updateFields: Record<string, unknown> = { ...input, updatedAt: now };
+    if (Array.isArray(input.emotes)) {
+      updateFields.emotes = JSON.stringify(input.emotes);
+    }
     await db
       .update(schema.characterCards)
-      .set({ ...input, updatedAt: now })
+      .set(updateFields as any)
       .where(
         and(
           eq(schema.characterCards.id, cardId),
@@ -72,6 +77,7 @@ export async function saveCharacterCard(
     postHistoryInstructions: input.postHistoryInstructions || "",
     worldBookId: input.worldBookId || null,
     avatarUrl: input.avatarUrl || null,
+    emotes: JSON.stringify(input.emotes ?? [null, null, null, null]),
   });
   return id;
 }

@@ -154,6 +154,15 @@ const en = {
   "rp.avatar.hint": "AI or uploaded image. The exported PNG carries the card so it imports straight into SillyTavern.",
   "rp.export.png": "Export PNG (SillyTavern)",
   "rp.error.avatar": "Failed to process portrait",
+  "rp.emotes": "Expressions",
+  "rp.emotes.hint": "4 panels · 1:1",
+  "rp.emotes.slot1": "neutral",
+  "rp.emotes.slot2": "happy",
+  "rp.emotes.slot3": "angry",
+  "rp.emotes.slot4": "dazed",
+  "rp.emotes.generate": "Generate expression",
+  "rp.emotes.upload": "Upload expression",
+  "rp.emotes.remove": "Remove",
 
   // Settings
   "settings.title": "Space Settings",
@@ -499,6 +508,15 @@ const zh: Record<keyof typeof en, string> = {
   "rp.avatar.hint": "AI 或自行上传的立绘。导出的 PNG 会内嵌角色卡，可直接拖进酒馆（SillyTavern）导入。",
   "rp.export.png": "导出 PNG（酒馆）",
   "rp.error.avatar": "立绘处理失败",
+  "rp.emotes": "表情栏",
+  "rp.emotes.hint": "4 格 · 1:1",
+  "rp.emotes.slot1": "平静",
+  "rp.emotes.slot2": "开心",
+  "rp.emotes.slot3": "生气",
+  "rp.emotes.slot4": "发呆",
+  "rp.emotes.generate": "生成表情",
+  "rp.emotes.upload": "上传表情",
+  "rp.emotes.remove": "移除",
 
   // Settings
   "settings.title": "空间设置",

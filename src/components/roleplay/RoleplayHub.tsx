@@ -15,6 +15,7 @@ import {
   Pencil,
   Download,
   Upload,
+  Smile,
 } from "lucide-react";
 
 interface CharacterCard {
@@ -29,6 +30,7 @@ interface CharacterCard {
   postHistoryInstructions: string;
   worldBookId: string | null;
   avatarUrl: string | null;
+  emotes: (string | null)[];
 }
 
 /** Avatar thumbnail that falls back to the gradient Bot icon on missing/broken URL. */
@@ -102,6 +104,7 @@ const DEFAULT_FIELDS = {
   systemPrompt: "",
   postHistoryInstructions: "",
   avatarUrl: "",
+  emotes: [null, null, null, null] as (string | null)[],
 };
 
 export default function RoleplayHub() {
@@ -122,13 +125,26 @@ export default function RoleplayHub() {
   const [avatarLoading, setAvatarLoading] = useState(false);
   const [avatarError, setAvatarError] = useState("");
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const emoteFileRefs = useRef<(HTMLInputElement | null)[]>([null, null, null, null]);
 
   // Chat state
   const [activeCard, setActiveCard] = useState<CharacterCard | null>(null);
+  const [activeEmoteIdx, setActiveEmoteIdx] = useState(0);
   const [chat, setChat] = useState<ChatMsg[]>([]);
   const [input, setInput] = useState("");
   const [sending, setSending] = useState(false);
   const chatEndRef = useRef<HTMLDivElement>(null);
+
+  /** Parse the API's JSON-encoded `emotes` column into a 4-slot array. */
+  function parseEmotes(raw: unknown): (string | null)[] {
+    if (!Array.isArray(raw)) return [null, null, null, null];
+    const out: (string | null)[] = [null, null, null, null];
+    for (let i = 0; i < 4; i++) {
+      const v = (raw as unknown[])[i];
+      out[i] = typeof v === "string" && v.length > 0 ? v : null;
+    }
+    return out;
+  }
 
   const fetchAll = useCallback(async () => {
     let cardsOk = false;
@@ -139,7 +155,13 @@ export default function RoleplayHub() {
     try {
       const cardsRes = await fetch("/api/characters");
       const cardsData = await cardsRes.json();
-      setCards(cardsData.cards || []);
+      const rawCards = (cardsData.cards || []) as any[];
+      setCards(
+        rawCards.map((c) => ({
+          ...c,
+          emotes: parseEmotes(c.emotes),
+        }))
+      );
       cardsOk = true;
     } catch {
       errors.push("characters");
@@ -170,6 +192,7 @@ export default function RoleplayHub() {
 
   const openChat = async (card: CharacterCard) => {
     setActiveCard(card);
+    setActiveEmoteIdx(0);
     setChat([]);
     setSending(true);
     try {
@@ -214,7 +237,7 @@ export default function RoleplayHub() {
     }
   };
 
-  const generateAvatar = async () => {
+  const generateAvatar = async (slot: "avatar" | "0" | "1" | "2" | "3" = "avatar") => {
     if (!form.name.trim()) {
       setAvatarError(t("rp.name"));
       return;
@@ -237,6 +260,7 @@ export default function RoleplayHub() {
           worldBookId: form.worldBookId,
           prompt: avatarPrompt,
           cardId: editingId || undefined,
+          slot,
         }),
       });
       const data = await res.json();
@@ -244,7 +268,15 @@ export default function RoleplayHub() {
         setAvatarError(data.error);
         return;
       }
-      setForm((f) => ({ ...f, avatarUrl: data.url }));
+      if (slot === "avatar") {
+        setForm((f) => ({ ...f, avatarUrl: data.url }));
+      } else {
+        const i = Number(slot);
+        setForm((f) => ({
+          ...f,
+          emotes: f.emotes.map((u, idx) => (idx === i ? data.url : u)),
+        }));
+      }
     } catch {
       setAvatarError(t("rp.error.avatar"));
     } finally {
@@ -252,7 +284,10 @@ export default function RoleplayHub() {
     }
   };
 
-  const onUploadFile = async (e: ChangeEvent<HTMLInputElement>) => {
+  const onUploadFile = async (
+    e: ChangeEvent<HTMLInputElement>,
+    slot: "avatar" | "0" | "1" | "2" | "3" = "avatar"
+  ) => {
     const file = e.target.files?.[0];
     e.target.value = ""; // allow re-selecting the same file later
     if (!file) return;
@@ -266,6 +301,7 @@ export default function RoleplayHub() {
       const fd = new FormData();
       fd.append("file", file);
       fd.append("cardId", editingId || "");
+      fd.append("slot", slot);
       fd.append(
         "card",
         JSON.stringify({
@@ -286,12 +322,27 @@ export default function RoleplayHub() {
         setAvatarError(data.error);
         return;
       }
-      setForm((f) => ({ ...f, avatarUrl: data.url }));
+      if (slot === "avatar") {
+        setForm((f) => ({ ...f, avatarUrl: data.url }));
+      } else {
+        const i = Number(slot);
+        setForm((f) => ({
+          ...f,
+          emotes: f.emotes.map((u, idx) => (idx === i ? data.url : u)),
+        }));
+      }
     } catch {
       setAvatarError(t("rp.error.avatar"));
     } finally {
       setAvatarLoading(false);
     }
+  };
+
+  const removeEmote = (i: number) => {
+    setForm((f) => ({
+      ...f,
+      emotes: f.emotes.map((u, idx) => (idx === i ? null : u)),
+    }));
   };
 
   const saveCard = async () => {
@@ -334,6 +385,9 @@ export default function RoleplayHub() {
       postHistoryInstructions: card.postHistoryInstructions || "",
       worldBookId: card.worldBookId,
       avatarUrl: card.avatarUrl || "",
+      emotes: card.emotes && card.emotes.length === 4
+        ? card.emotes
+        : parseEmotes(card.emotes),
     });
     setAvatarPrompt("");
     setAvatarError("");
@@ -375,7 +429,10 @@ export default function RoleplayHub() {
       <div className="flex flex-col h-full">
         {/* Header */}
           <div className="flex items-center gap-3 px-4 py-3 border-b border-[var(--color-border)]">
-            <AvatarBox url={activeCard.avatarUrl} className="w-9 h-9 rounded-full shrink-0" />
+            <AvatarBox
+              url={activeCard.emotes?.[activeEmoteIdx] || activeCard.avatarUrl}
+              className="w-9 h-9 rounded-full shrink-0"
+            />
           <div className="flex-1 min-w-0">
             <h2 className="font-[family-name:var(--font-display)] font-bold text-sm truncate">
               {activeCard.name}
@@ -391,6 +448,44 @@ export default function RoleplayHub() {
             <X size={16} />
           </button>
         </div>
+
+        {/* Expression emote strip — click to swap the avatar above */}
+        {activeCard.emotes && activeCard.emotes.some(Boolean) && (
+          <div className="flex items-center gap-2 px-4 py-2 border-b border-[var(--color-border)] bg-[var(--color-bg-deep)]/40">
+            <span className="text-[10px] uppercase tracking-wider text-[var(--color-text-muted)]">
+              {t("rp.emotes")}
+            </span>
+            <div className="flex gap-1.5">
+              {[0, 1, 2, 3].map((i) => {
+                const url = activeCard.emotes[i];
+                const active = i === activeEmoteIdx;
+                return (
+                  <button
+                    key={i}
+                    onClick={() => url && setActiveEmoteIdx(i)}
+                    disabled={!url}
+                    title={t(`rp.emotes.slot${i + 1}`)}
+                    className={`relative h-8 w-8 overflow-hidden rounded-md border-2 transition-all ${
+                      active
+                        ? "border-[var(--color-accent)] shadow-[0_0_10px_rgba(108,92,231,0.45)] scale-105"
+                        : url
+                          ? "border-transparent opacity-60 hover:opacity-100"
+                          : "border-transparent opacity-30 cursor-not-allowed"
+                    }`}
+                  >
+                    {url ? (
+                      <img src={url} alt="" className="h-full w-full object-cover" />
+                    ) : (
+                      <div className="flex h-full w-full items-center justify-center bg-[var(--color-bg-input)] text-[10px] text-[var(--color-text-muted)]">
+                        {i + 1}
+                      </div>
+                    )}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        )}
 
         {/* Messages */}
         <div className="flex-1 overflow-y-auto py-4 px-4 space-y-3">
@@ -635,7 +730,7 @@ export default function RoleplayHub() {
                         type="file"
                         accept="image/png,image/jpeg,image/webp,image/gif"
                         className="hidden"
-                        onChange={onUploadFile}
+                        onChange={(e) => onUploadFile(e, "avatar")}
                       />
                     </div>
                     {avatarError && (
@@ -645,6 +740,89 @@ export default function RoleplayHub() {
                       {t("rp.avatar.hint")}
                     </p>
                   </div>
+                </div>
+              </div>
+              {/* Expression Emotes — 4-panel square thumbnails */}
+              <div>
+                <label className="mb-1.5 flex items-center justify-between text-xs text-[var(--color-text-muted)]">
+                  <span className="inline-flex items-center gap-1.5">
+                    <Smile size={12} className="text-[var(--color-teal)]" />
+                    {t("rp.emotes")}
+                  </span>
+                  <span className="text-[10px]">{t("rp.emotes.hint")}</span>
+                </label>
+                <div className="grid grid-cols-4 gap-2">
+                  {[0, 1, 2, 3].map((i) => {
+                    const url = form.emotes[i];
+                    const slot = String(i) as "0" | "1" | "2" | "3";
+                    return (
+                      <div
+                        key={i}
+                        className="group/emote relative aspect-square overflow-hidden rounded-lg border border-[var(--color-border)] bg-[var(--color-bg-input)]"
+                      >
+                        {url ? (
+                          <img
+                            src={url}
+                            alt=""
+                            className="absolute inset-0 h-full w-full object-cover"
+                          />
+                        ) : (
+                          <div className="absolute inset-0 flex flex-col items-center justify-center gap-0.5 text-[var(--color-text-muted)]">
+                            <span className="font-[family-name:var(--font-display)] text-base">
+                              {i + 1}
+                            </span>
+                            <span className="text-[9px]">{t(`rp.emotes.slot${i + 1}`)}</span>
+                          </div>
+                        )}
+
+                        {/* Overlay actions — appear on hover */}
+                        <div className="absolute inset-0 flex items-center justify-center gap-1 bg-black/60 opacity-0 transition-opacity duration-150 group-hover/emote:opacity-100">
+                          <button
+                            type="button"
+                            onClick={() => generateAvatar(slot)}
+                            disabled={avatarLoading}
+                            title={t("rp.emotes.generate")}
+                            className="rounded bg-white/10 p-1.5 text-white backdrop-blur transition-colors hover:bg-[var(--color-accent)] disabled:opacity-40"
+                          >
+                            {avatarLoading ? (
+                              <Loader2 size={12} className="animate-spin" />
+                            ) : (
+                              <Sparkles size={12} />
+                            )}
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => emoteFileRefs.current[i]?.click()}
+                            disabled={avatarLoading}
+                            title={t("rp.emotes.upload")}
+                            className="rounded bg-white/10 p-1.5 text-white backdrop-blur transition-colors hover:bg-[var(--color-accent)] disabled:opacity-40"
+                          >
+                            <Upload size={12} />
+                          </button>
+                          {url && (
+                            <button
+                              type="button"
+                              onClick={() => removeEmote(i)}
+                              title={t("rp.emotes.remove")}
+                              className="rounded bg-white/10 p-1.5 text-white backdrop-blur transition-colors hover:bg-[var(--color-danger)]"
+                            >
+                              <X size={12} />
+                            </button>
+                          )}
+                        </div>
+
+                        <input
+                          ref={(el) => {
+                            emoteFileRefs.current[i] = el;
+                          }}
+                          type="file"
+                          accept="image/png,image/jpeg,image/webp,image/gif"
+                          className="hidden"
+                          onChange={(e) => onUploadFile(e, slot)}
+                        />
+                      </div>
+                    );
+                  })}
                 </div>
               </div>
             </div>

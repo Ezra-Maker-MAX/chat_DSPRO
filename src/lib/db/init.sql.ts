@@ -206,6 +206,7 @@ export const INIT_SQL = [
     post_history_instructions TEXT DEFAULT '',
     avatar_seed TEXT DEFAULT 'char',
     avatar_url TEXT,
+    emotes TEXT DEFAULT '[]',
     world_book_id TEXT REFERENCES world_books(id),
     is_active INTEGER DEFAULT 1,
     created_at TEXT DEFAULT (datetime('now')),
@@ -213,6 +214,7 @@ export const INIT_SQL = [
   )`,
 
   `ALTER TABLE character_cards ADD COLUMN avatar_url TEXT`,
+  `ALTER TABLE character_cards ADD COLUMN emotes TEXT DEFAULT '[]'`,
 
   `CREATE TABLE IF NOT EXISTS roleplay_sessions (
     id TEXT PRIMARY KEY NOT NULL,

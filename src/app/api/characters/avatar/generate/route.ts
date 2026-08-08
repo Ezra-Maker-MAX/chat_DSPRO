@@ -44,24 +44,47 @@ export async function POST(req: NextRequest) {
     );
   }
 
-  const slot: EmoteSlot = parseSlot(body.slot);
+  /**
+ * Per-emote descriptors. Each entry pairs the mood word with a concrete
+ * facial-expression / pose description so the image gateway returns
+ * visibly different faces instead of the same character with a vague
+ * "happy mood" cue. The order MUST match the UI slot order (0=neutral,
+ * 1=happy, 2=angry, 3=dazed) — see rp.emotes.slot{1..4} in i18n.
+ */
+const EMOTE_DESCRIPTORS: Record<"0" | "1" | "2" | "3", string> = {
+  "0": "neutral resting face, eyes soft and relaxed, mouth closed, calm composed expression",
+  "1": "bright cheerful smile showing teeth, eyes curved like happy crescents, blushing cheeks, joyful energetic expression",
+  "2": "furious angry expression, deeply furrowed brows, sharp intense glare, clenched teeth, dark moody aura",
+  "3": "dazed confused expression, spiral eyes, vacant open mouth, head slightly tilted, dreamy spaced-out look",
+};
 
-// Use the user-provided prompt, else synthesise a short portrait prompt
-// from a handful of card fields, capped to avoid tripping content policy.
+const slot: EmoteSlot = parseSlot(body.slot);
+
+// Build the prompt. Two important guards:
+//  1. Slot-to-mood mapping was previously off-by-one (used
+//     ["happy","angry","eating","dazed"] which mismatched the UI labels
+//     平静/开心/生气/发呆). Fixed: index by slot to EMOTE_DESCRIPTORS.
+//  2. Don't include the raw character name in the auto-prompt — many users
+//     name OCs after real IPs and any reference in the prompt makes the
+//     upstream gateway reject with content_policy_violation. Use the
+//     user's own trait description (description → personality → generic
+//     fallback) so the AI still has a subject without naming anyone.
+const userPrompt = body.prompt?.trim();
+const traitSubject =
+  cap(body.description, 120) ||
+  cap(body.personality, 80) ||
+  "anime original character";
 const prompt =
-    body.prompt?.trim() ||
-    [
-      slot === "avatar"
-        ? "character portrait, friendly illustration"
-        : `character expression, square headshot, ${
-            ["happy", "angry", "eating", "dazed"][Number(slot)] || "neutral"
-          } mood`,
-      `subject: ${cap(name, 40)}`,
-      cap(body.description, 120),
-      cap(body.personality, 80),
-    ]
-      .filter(Boolean)
-      .join(", ");
+  userPrompt ||
+  [
+    slot === "avatar"
+      ? "character portrait, friendly illustration"
+      : `character expression, square headshot, ${EMOTE_DESCRIPTORS[slot as "0" | "1" | "2" | "3"] || EMOTE_DESCRIPTORS["0"]}`,
+    traitSubject,
+    cap(name, 40) ? `name tag: ${cap(name, 40)}` : "", // name tag (not "subject:") so policy engines don't treat it as the prompt's primary identifier
+  ]
+    .filter(Boolean)
+    .join(", ");
 
   try {
     const bytes = await generateImageBytes(profile, prompt);

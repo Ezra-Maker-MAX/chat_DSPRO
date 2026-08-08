@@ -64,6 +64,7 @@ export async function POST(req: NextRequest) {
     systemPrompt: body.systemPrompt,
     postHistoryInstructions: body.postHistoryInstructions,
     worldBookId: body.worldBookId || null,
+    avatarUrl: body.avatarUrl || null,
   });
 
   return NextResponse.json({ success: true, id });
@@ -131,6 +132,7 @@ export async function PATCH(req: NextRequest) {
     systemPrompt: body.systemPrompt,
     postHistoryInstructions: body.postHistoryInstructions,
     worldBookId: body.worldBookId || null,
+    avatarUrl: body.avatarUrl || null,
   }, id);
 
   return NextResponse.json({ success: true, id });

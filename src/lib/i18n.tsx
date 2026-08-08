@@ -145,6 +145,15 @@ const en = {
   "rp.error.delete": "Failed to delete character",
   "rp.error.session": "Failed to load session",
   "rp.error.network": "⚠️ Network error — try again.",
+  "rp.avatar": "Portrait",
+  "rp.avatar.prompt": "Optional prompt for AI generation, e.g. 'silver hair, red coat, anime style'…",
+  "rp.avatar.generate": "Generate",
+  "rp.avatar.generating": "Generating…",
+  "rp.avatar.upload": "Upload",
+  "rp.avatar.remove": "Remove",
+  "rp.avatar.hint": "AI or uploaded image. The exported PNG carries the card so it imports straight into SillyTavern.",
+  "rp.export.png": "Export PNG (SillyTavern)",
+  "rp.error.avatar": "Failed to process portrait",
 
   // Settings
   "settings.title": "Space Settings",
@@ -481,6 +490,15 @@ const zh: Record<keyof typeof en, string> = {
   "rp.error.delete": "删除角色失败",
   "rp.error.session": "加载会话失败",
   "rp.error.network": "⚠️ 网络错误，请重试。",
+  "rp.avatar": "立绘",
+  "rp.avatar.prompt": "生成立绘的可选提示词，例如「银发、红外套、动漫风格」…",
+  "rp.avatar.generate": "生成",
+  "rp.avatar.generating": "生成中…",
+  "rp.avatar.upload": "上传",
+  "rp.avatar.remove": "移除",
+  "rp.avatar.hint": "AI 或自行上传的立绘。导出的 PNG 会内嵌角色卡，可直接拖进酒馆（SillyTavern）导入。",
+  "rp.export.png": "导出 PNG（酒馆）",
+  "rp.error.avatar": "立绘处理失败",
 
   // Settings
   "settings.title": "空间设置",

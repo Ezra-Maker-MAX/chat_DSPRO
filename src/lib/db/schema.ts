@@ -185,6 +185,7 @@ export const characterCards = sqliteTable("character_cards", {
   systemPrompt: text("system_prompt").default(""),
   postHistoryInstructions: text("post_history_instructions").default(""),
   avatarSeed: text("avatar_seed").default("char"),
+  avatarUrl: text("avatar_url"),
   worldBookId: text("world_book_id").references(() => worldBooks.id),
   isActive: integer("is_active", { mode: "boolean" }).default(true),
   createdAt: text("created_at").default(sql`(datetime('now'))`),

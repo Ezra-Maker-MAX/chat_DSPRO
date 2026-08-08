@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef, useCallback } from "react";
+import { useState, useEffect, useRef, useCallback, type ChangeEvent } from "react";
 import { useI18n } from "@/lib/i18n";
 import {
   Bot,
@@ -13,6 +13,8 @@ import {
   X,
   KeyRound,
   Pencil,
+  Download,
+  Upload,
 } from "lucide-react";
 
 interface CharacterCard {
@@ -26,6 +28,29 @@ interface CharacterCard {
   systemPrompt: string;
   postHistoryInstructions: string;
   worldBookId: string | null;
+  avatarUrl: string | null;
+}
+
+/** Avatar thumbnail that falls back to the gradient Bot icon on missing/broken URL. */
+function AvatarBox({ url, className }: { url: string | null | undefined; className?: string }) {
+  const [failed, setFailed] = useState(false);
+  if (url && !failed) {
+    return (
+      <img
+        src={url}
+        alt=""
+        className={`${className} object-cover`}
+        onError={() => setFailed(true)}
+      />
+    );
+  }
+  return (
+    <div
+      className={`${className} bg-gradient-to-br from-[var(--color-teal)] to-[var(--color-accent)] flex items-center justify-center overflow-hidden`}
+    >
+      <Bot size={18} className="text-white" />
+    </div>
+  );
 }
 
 interface WorldBook {
@@ -47,6 +72,7 @@ const DEFAULT_FIELDS = {
   mesExample: "",
   systemPrompt: "",
   postHistoryInstructions: "",
+  avatarUrl: "",
 };
 
 export default function RoleplayHub() {
@@ -63,6 +89,10 @@ export default function RoleplayHub() {
     name: "",
     ...DEFAULT_FIELDS,
   });
+  const [avatarPrompt, setAvatarPrompt] = useState("");
+  const [avatarLoading, setAvatarLoading] = useState(false);
+  const [avatarError, setAvatarError] = useState("");
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Chat state
   const [activeCard, setActiveCard] = useState<CharacterCard | null>(null);
@@ -155,6 +185,86 @@ export default function RoleplayHub() {
     }
   };
 
+  const generateAvatar = async () => {
+    if (!form.name.trim()) {
+      setAvatarError(t("rp.name"));
+      return;
+    }
+    setAvatarLoading(true);
+    setAvatarError("");
+    try {
+      const res = await fetch("/api/characters/avatar/generate", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          name: form.name,
+          description: form.description,
+          personality: form.personality,
+          scenario: form.scenario,
+          firstMes: form.firstMes,
+          mesExample: form.mesExample,
+          systemPrompt: form.systemPrompt,
+          postHistoryInstructions: form.postHistoryInstructions,
+          worldBookId: form.worldBookId,
+          prompt: avatarPrompt,
+          cardId: editingId || undefined,
+        }),
+      });
+      const data = await res.json();
+      if (data.error) {
+        setAvatarError(data.error);
+        return;
+      }
+      setForm((f) => ({ ...f, avatarUrl: data.url }));
+    } catch {
+      setAvatarError(t("rp.error.avatar"));
+    } finally {
+      setAvatarLoading(false);
+    }
+  };
+
+  const onUploadFile = async (e: ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    e.target.value = ""; // allow re-selecting the same file later
+    if (!file) return;
+    if (!form.name.trim()) {
+      setAvatarError(t("rp.name"));
+      return;
+    }
+    setAvatarLoading(true);
+    setAvatarError("");
+    try {
+      const fd = new FormData();
+      fd.append("file", file);
+      fd.append("cardId", editingId || "");
+      fd.append(
+        "card",
+        JSON.stringify({
+          name: form.name,
+          description: form.description,
+          personality: form.personality,
+          scenario: form.scenario,
+          firstMes: form.firstMes,
+          mesExample: form.mesExample,
+          systemPrompt: form.systemPrompt,
+          postHistoryInstructions: form.postHistoryInstructions,
+          worldBookId: form.worldBookId,
+        })
+      );
+      const res = await fetch("/api/characters/avatar/upload", { method: "POST", body: fd });
+      const data = await res.json();
+      if (data.error) {
+        setAvatarError(data.error);
+        return;
+      }
+      setForm((f) => ({ ...f, avatarUrl: data.url }));
+    } catch {
+      setAvatarError(t("rp.error.avatar"));
+    } finally {
+      setAvatarLoading(false);
+    }
+  };
+
   const saveCard = async () => {
     if (!form.name.trim()) {
       setError(t("rp.name"));
@@ -194,7 +304,10 @@ export default function RoleplayHub() {
       systemPrompt: card.systemPrompt || "",
       postHistoryInstructions: card.postHistoryInstructions || "",
       worldBookId: card.worldBookId,
+      avatarUrl: card.avatarUrl || "",
     });
+    setAvatarPrompt("");
+    setAvatarError("");
     setError("");
     setEditing(true);
   };
@@ -203,6 +316,8 @@ export default function RoleplayHub() {
     setEditing(false);
     setEditingId(null);
     setForm({ name: "", ...DEFAULT_FIELDS });
+    setAvatarPrompt("");
+    setAvatarError("");
     setError("");
   };
 
@@ -230,10 +345,8 @@ export default function RoleplayHub() {
     return (
       <div className="flex flex-col h-full">
         {/* Header */}
-        <div className="flex items-center gap-3 px-4 py-3 border-b border-[var(--color-border)]">
-          <div className="w-9 h-9 rounded-full bg-gradient-to-br from-[var(--color-teal)] to-[var(--color-accent)] flex items-center justify-center shrink-0">
-            <Bot size={16} className="text-white" />
-          </div>
+          <div className="flex items-center gap-3 px-4 py-3 border-b border-[var(--color-border)]">
+            <AvatarBox url={activeCard.avatarUrl} className="w-9 h-9 rounded-full shrink-0" />
           <div className="flex-1 min-w-0">
             <h2 className="font-[family-name:var(--font-display)] font-bold text-sm truncate">
               {activeCard.name}
@@ -335,6 +448,8 @@ export default function RoleplayHub() {
               setEditingId(null);
               setEditing(true);
               setForm({ name: "", ...DEFAULT_FIELDS });
+              setAvatarPrompt("");
+              setAvatarError("");
               setError("");
             }}
             className="flex items-center gap-1.5 px-3 py-2 rounded-lg bg-[var(--color-accent)] text-white text-xs font-medium hover:bg-[var(--color-accent-glow)] transition-colors"
@@ -442,6 +557,67 @@ export default function RoleplayHub() {
                   {t("rp.worldBook.hint")}
                 </p>
               </div>
+              <div>
+                <label className="block text-xs text-[var(--color-text-muted)] mb-1">{t("rp.avatar")}</label>
+                <div className="flex items-start gap-3">
+                  <AvatarBox url={form.avatarUrl} className="w-16 h-16 rounded-xl shrink-0" />
+                  <div className="flex-1 min-w-0 space-y-2">
+                    <textarea
+                      value={avatarPrompt}
+                      onChange={(e) => setAvatarPrompt(e.target.value)}
+                      placeholder={t("rp.avatar.prompt")}
+                      rows={2}
+                      className="w-full bg-[var(--color-bg-input)] border border-[var(--color-border)] rounded-lg px-3 py-2 text-sm resize-none focus:outline-none focus:border-[var(--color-accent)]"
+                    />
+                    <div className="flex flex-wrap gap-2">
+                      <button
+                        type="button"
+                        onClick={generateAvatar}
+                        disabled={avatarLoading}
+                        className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[var(--color-teal)] text-[var(--color-bg-deep)] text-xs font-medium hover:bg-[var(--color-accent-glow)] hover:text-white disabled:opacity-40 transition-colors"
+                      >
+                        {avatarLoading ? <Loader2 size={13} className="animate-spin" /> : <Sparkles size={13} />}
+                        {avatarLoading ? t("rp.avatar.generating") : t("rp.avatar.generate")}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => fileInputRef.current?.click()}
+                        disabled={avatarLoading}
+                        className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-[var(--color-border)] text-xs text-[var(--color-text-secondary)] hover:bg-[var(--color-bg-hover)] transition-colors"
+                      >
+                        <Upload size={13} />
+                        {t("rp.avatar.upload")}
+                      </button>
+                      {form.avatarUrl && (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setForm((f) => ({ ...f, avatarUrl: "" }));
+                            setAvatarPrompt("");
+                          }}
+                          className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-[var(--color-border)] text-xs text-[var(--color-danger)] hover:bg-[var(--color-danger)]/10 transition-colors"
+                        >
+                          <X size={13} />
+                          {t("rp.avatar.remove")}
+                        </button>
+                      )}
+                      <input
+                        ref={fileInputRef}
+                        type="file"
+                        accept="image/png,image/jpeg,image/webp,image/gif"
+                        className="hidden"
+                        onChange={onUploadFile}
+                      />
+                    </div>
+                    {avatarError && (
+                      <p className="text-[11px] text-[var(--color-danger)]">{avatarError}</p>
+                    )}
+                    <p className="text-[10px] text-[var(--color-text-muted)]">
+                      {t("rp.avatar.hint")}
+                    </p>
+                  </div>
+                </div>
+              </div>
             </div>
             <div className="flex gap-2 mt-4">
               <button
@@ -476,9 +652,7 @@ export default function RoleplayHub() {
             {cards.map((card) => (
               <div key={card.id} className="glass-card p-4 group flex flex-col">
                 <div className="flex items-start gap-3 mb-2">
-                  <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-[var(--color-teal)] to-[var(--color-accent)] flex items-center justify-center shrink-0">
-                    <Bot size={18} className="text-white" />
-                  </div>
+                  <AvatarBox url={card.avatarUrl} className="w-10 h-10 rounded-xl shrink-0" />
                   <div className="flex-1 min-w-0">
                     <h3 className="font-medium text-sm truncate">{card.name}</h3>
                     <p className="text-[11px] text-[var(--color-text-muted)] truncate">
@@ -499,6 +673,14 @@ export default function RoleplayHub() {
                     >
                       <Pencil size={14} />
                     </button>
+                    <a
+                      href={`/api/characters/${card.id}/export`}
+                      download
+                      className="p-1.5 rounded-lg text-[var(--color-text-muted)] hover:text-[var(--color-teal)] hover:bg-[var(--color-bg-hover)] opacity-0 group-hover:opacity-100 transition-all"
+                      title={t("rp.export.png")}
+                    >
+                      <Download size={14} />
+                    </a>
                     <button
                       onClick={() => deleteCard(card.id)}
                       className="p-1.5 rounded-lg text-[var(--color-text-muted)] hover:text-[var(--color-danger)] hover:bg-[var(--color-bg-hover)] opacity-0 group-hover:opacity-100 transition-all"

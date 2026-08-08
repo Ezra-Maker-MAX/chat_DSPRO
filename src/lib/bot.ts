@@ -175,6 +175,56 @@ export async function generateImage(
   };
 }
 
+/**
+ * Same as generateImage but returns the raw PNG bytes (needed when we want to
+ * embed metadata into the image, e.g. a SillyTavern character card chunk).
+ */
+export async function generateImageBytes(
+  profile: typeof schema.botProfiles.$inferSelect,
+  prompt: string
+): Promise<Buffer> {
+  if (!profile.imageApiKey) {
+    throw new Error("Bot image gateway is not configured. Add an API key in Settings → Bot.");
+  }
+
+  const baseUrl = (profile.imageBaseUrl || "https://api.openai.com/v1").replace(/\/+$/, "");
+  const model = profile.imageModel || "gpt-image-1";
+  const provider = profile.imageProvider || "openai";
+
+  const body: Record<string, unknown> = { model, prompt };
+  if (provider === "openai") {
+    body.n = 1;
+    body.size = "1024x1024";
+    body.response_format = "b64_json";
+  }
+
+  const res = await fetch(`${baseUrl}/images/generations`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${profile.imageApiKey}`,
+    },
+    body: JSON.stringify(body),
+  });
+
+  if (!res.ok) {
+    const text = await res.text().catch(() => "");
+    throw new Error(`Image API ${res.status}: ${text.slice(0, 300)}`);
+  }
+
+  const data = await res.json();
+  const item = data?.data?.[0];
+  const b64 = item?.b64_json;
+  const url = item?.url;
+  if (b64) return Buffer.from(b64, "base64");
+  if (url) {
+    const r = await fetch(url);
+    if (!r.ok) throw new Error(`Failed to download generated image: ${r.status}`);
+    return Buffer.from(await r.arrayBuffer());
+  }
+  throw new Error("Image API returned no data (no b64_json or url). Check gateway config.");
+}
+
 // ============================================================
 // Image queue (cooldown + ordering)
 // ============================================================

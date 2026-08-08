@@ -18,6 +18,7 @@ export interface CharacterCardInput {
   systemPrompt?: string;
   postHistoryInstructions?: string;
   worldBookId?: string | null;
+  avatarUrl?: string | null;
 }
 
 export interface WorldBookEntryInput {
@@ -70,6 +71,7 @@ export async function saveCharacterCard(
     systemPrompt: input.systemPrompt || "",
     postHistoryInstructions: input.postHistoryInstructions || "",
     worldBookId: input.worldBookId || null,
+    avatarUrl: input.avatarUrl || null,
   });
   return id;
 }
@@ -106,6 +108,24 @@ export async function getCharacterCard(tenantId: string, cardId: string) {
       .limit(1);
   }
   return { card, worldBook };
+}
+
+/** Get a world book together with all its entries (for tavern character_book export). */
+export async function getWorldBookWithEntries(tenantId: string, worldBookId: string) {
+  const [book] = await db
+    .select()
+    .from(schema.worldBooks)
+    .where(and(eq(schema.worldBooks.id, worldBookId), eq(schema.worldBooks.tenantId, tenantId)))
+    .limit(1);
+  if (!book) return null;
+
+  const entries = await db
+    .select()
+    .from(schema.worldBookEntries)
+    .where(eq(schema.worldBookEntries.worldBookId, worldBookId))
+    .orderBy(asc(schema.worldBookEntries.insertionOrder));
+
+  return { book, entries };
 }
 
 // ============================================================

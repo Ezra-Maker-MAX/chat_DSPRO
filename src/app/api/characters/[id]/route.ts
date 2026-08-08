@@ -64,6 +64,7 @@ export async function PUT(req: NextRequest, { params }: Params) {
       systemPrompt: body.systemPrompt,
       postHistoryInstructions: body.postHistoryInstructions,
       worldBookId: body.worldBookId || null,
+      avatarUrl: body.avatarUrl || null,
     },
     id
   );

@@ -205,11 +205,14 @@ export const INIT_SQL = [
     system_prompt TEXT DEFAULT '',
     post_history_instructions TEXT DEFAULT '',
     avatar_seed TEXT DEFAULT 'char',
+    avatar_url TEXT,
     world_book_id TEXT REFERENCES world_books(id),
     is_active INTEGER DEFAULT 1,
     created_at TEXT DEFAULT (datetime('now')),
     updated_at TEXT DEFAULT (datetime('now'))
   )`,
+
+  `ALTER TABLE character_cards ADD COLUMN avatar_url TEXT`,
 
   `CREATE TABLE IF NOT EXISTS roleplay_sessions (
     id TEXT PRIMARY KEY NOT NULL,

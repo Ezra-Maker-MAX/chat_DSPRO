@@ -753,7 +753,7 @@ export default function RoleplayHub() {
                     <div className="flex flex-wrap gap-2">
                       <button
                         type="button"
-                        onClick={generateAvatar}
+                        onClick={() => generateAvatar("avatar")}
                         disabled={avatarLoading}
                         className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[var(--color-teal)] text-[var(--color-bg-deep)] text-xs font-medium hover:bg-[var(--color-accent-glow)] hover:text-white disabled:opacity-40 transition-colors"
                       >

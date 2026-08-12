@@ -672,7 +672,11 @@ export async function generateCharacterReply(params: {
     model: routed.provider.model(routed.provider.modelId),
     system: systemPrompt,
     messages,
-    temperature: 0.9,
+    temperature: 1.0,
+    // Cap reply length: roleplay replies should feel like chat, not essays.
+    // 600 tokens ≈ 400-450 CJK chars — enough for vivid scenes, short enough
+    // to keep the exchange snappy and natural.
+    maxTokens: 600,
   });
 
   return text || "(the character fell silent...)";

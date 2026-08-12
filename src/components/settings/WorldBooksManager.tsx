@@ -62,7 +62,7 @@ export default function WorldBooksManager() {
   const [editingEntryId, setEditingEntryId] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const [expandedEntryId, setExpandedEntryId] = useState<string | null>(null);
-  const [showAdvanced, setShowAdvanced] = useState(false);
+  const [showAdvanced, setShowAdvanced] = useState(true); // 前端偏好：默认展开，CONST / token 预算等常用开关露在外面，少一次点击
   const [copiedId, setCopiedId] = useState<string | null>(null);
 
   // Per-book scan depth
@@ -139,7 +139,7 @@ export default function WorldBooksManager() {
   const resetForm = () => {
     setEntryForm({ ...EMPTY_ENTRY });
     setEditingEntryId(null);
-    setShowAdvanced(false);
+    setShowAdvanced(true); // 保持展开，避免每次保存后又折叠
   };
 
   const saveEntry = async () => {

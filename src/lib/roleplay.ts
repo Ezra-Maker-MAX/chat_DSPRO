@@ -274,6 +274,59 @@ export interface ActivatedEntry {
   constant: boolean;
 }
 
+/**
+ * Synonymous-trigger families (Layer: `~`-prefixed keywords).
+ * A key written as `~触手` expands to the whole family below, so a player
+ * mentioning 章鱼/藤蔓/触须/黏液 still triggers the tentacle entry — much
+ * more forgiving than the exact-substring match for free-form roleplay text.
+ * Keep families small (5-10 terms) to avoid over-triggering.
+ */
+const KEYWORD_FAMILIES: Record<string, string[]> = {
+  触手: ["触手", "章鱼", "藤蔓", "触须", "黏液", "滑腻", "软体"],
+  性爱: ["性爱", "做爱", "交合", "上床", "搞", "干", "操", "来一发"],
+  酒吧: ["酒吧", "酒馆", "夜店", "喝酒", "喝一杯", "吧台", "威士忌"],
+  摩天轮: ["摩天轮", "缆车", "空中", "高空", "俯瞰", "最高点"],
+  学院: ["学院", "学校", "校园", "教室", "老师", "上课", "课间", "午休"],
+  健身: ["健身", "锻炼", "运动", "训练", "健身房", "瘦身", "器械"],
+  丧尸: ["丧尸", "末世", "末日", "幸存者", "避难", "僵尸"],
+  军妓: ["军妓", "军人", "士兵", "军官", "部队", "军营", "军装"],
+  警察: ["警察", "警官", "警局", "枪"],
+  古堡: ["古堡", "城堡", "地牢", "刑房", "钢琴", "支配"],
+  贩卖机: ["贩卖机", "投币", "隔间", "快餐", "自助"],
+  地铁: ["地铁", "车厢", "站台", "隧道", "列车"],
+  厕所: ["厕所", "公厕", "墙洞", "卫生间", "洗手间"],
+  电视台: ["电视台", "直播", "主持人", "新闻", "采访"],
+  办公室: ["办公室", "职场", "工位", "老板", "职员"],
+  银行: ["银行", "柜台", "存取", "业务"],
+  超市: ["超市", "购物", "货架", "收银"],
+  冰淇淋: ["冰淇淋", "雪糕", "冰棍", "甜筒"],
+  榨汁: ["榨汁", "榨取", "高潮液"],
+};
+
+/**
+ * Expand a single trigger keyword into the list of terms to match.
+ * - `~家族` → the family's terms (synonym matching).
+ * - otherwise → the keyword itself (exact substring, current behaviour).
+ */
+function expandKeyword(k: string): string[] {
+  const trimmed = (k || "").trim();
+  if (!trimmed) return [];
+  if (trimmed.startsWith("~")) {
+    const family = trimmed.slice(1);
+    return KEYWORD_FAMILIES[family] ? [...KEYWORD_FAMILIES[family]] : [family];
+  }
+  return [trimmed];
+}
+
+/** True if any expanded term of `k` appears in scanText (case handled by caller). */
+function keywordHits(k: string, scanText: string, caseSensitive: boolean): boolean {
+  return expandKeyword(k).some((term) => {
+    if (!term) return false;
+    const kw = caseSensitive ? term : term.toLowerCase();
+    return scanText.includes(kw);
+  });
+}
+
 export async function activateLorebookEntries(
   worldBookId: string,
   conversationText: string,
@@ -317,31 +370,19 @@ export async function activateLorebookEntries(
     const caseSensitive = !!e.caseSensitive;
     const scanText = caseSensitive ? resolvedText : resolvedText.toLowerCase();
 
-    // Check primary keys
-    const primaryMatch = keys.some((k) => {
-      if (!k) return false;
-      const kw = caseSensitive ? k : k.toLowerCase();
-      return scanText.includes(kw);
-    });
+    // Check primary keys (`~` prefix = synonym-family match, else exact substring)
+    const primaryMatch = keys.some((k) => keywordHits(k, scanText, caseSensitive));
 
     if (!primaryMatch) continue;
 
     // Apply selective logic for secondary keys
     if (logic === "AND" && secKeys.length > 0) {
-      const allSecMatch = secKeys.every((k) => {
-        if (!k) return true;
-        const kw = caseSensitive ? k : k.toLowerCase();
-        return scanText.includes(kw);
-      });
+      const allSecMatch = secKeys.every((k) => keywordHits(k, scanText, caseSensitive));
       if (!allSecMatch) continue;
     }
 
     if (logic === "NOT" && secKeys.length > 0) {
-      const anySecMatch = secKeys.some((k) => {
-        if (!k) return false;
-        const kw = caseSensitive ? k : k.toLowerCase();
-        return scanText.includes(kw);
-      });
+      const anySecMatch = secKeys.some((k) => keywordHits(k, scanText, caseSensitive));
       if (anySecMatch) continue;
     }
 
@@ -357,6 +398,38 @@ export async function activateLorebookEntries(
   return activated;
 }
 
+/**
+ * Random story-diverge block (Layer: `【EVENT】` syntax).
+ *
+ * An entry content may contain one or more lines shaped like:
+ *   【EVENT】事件A / 事件B / 事件C
+ * When activated, the whole 【EVENT】 line is replaced with a directive that
+ * asks the model to pick 1-2 of the listed events and weave them into the
+ * current reply — a cheap "random story engine" without any external RNG:
+ * the model itself performs the random selection, keeping replies fresh and
+ * branching.
+ *
+ * The rest of the entry (the lore/description) is kept verbatim.
+ */
+function applyEventBlocks(content: string): string {
+  const EVENT_RE = /【EVENT】[^\n]*/g;
+  let hasEvent = false;
+  const rendered = content.replace(EVENT_RE, (line) => {
+    hasEvent = true;
+    const pool = line
+      .replace(/^【EVENT】/, "")
+      .split(/[\/／|｜,，、]/)
+      .map((s) => s.trim())
+      .filter(Boolean);
+    if (pool.length === 0) return "";
+    return (
+      `[随机剧情事件 — 从下面候选中随机选 1-2 个（不要全选，也不要每次都选第一个），` +
+      `自然地融入本回合的剧情推进与角色反应中：] ${pool.join(" / ")}`
+    );
+  });
+  return hasEvent ? rendered : content;
+}
+
 /** Trim entry content to tokenBudget (rough char estimate: 1 token ≈ 4 chars for CJK, ≈ 3.5 for EN) */
 function trimEntry(e: typeof schema.worldBookEntries.$inferSelect): ActivatedEntry {
   let content = e.content || "";
@@ -368,6 +441,8 @@ function trimEntry(e: typeof schema.worldBookEntries.$inferSelect): ActivatedEnt
       content = content.slice(0, maxChars) + "... [truncated]";
     }
   }
+  // Random-diverge event blocks: swap 【EVENT】 lines for a "pick 1-2" directive
+  content = applyEventBlocks(content);
   // Apply {{char}} / {{user}} macros in content too
   return {
     id: e.id,

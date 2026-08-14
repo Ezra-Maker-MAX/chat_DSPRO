@@ -115,6 +115,7 @@ export default function BotSettings() {
   }
 
   return (
+    <>
     <div className="space-y-4">
       {error && (
         <div className="p-3 rounded-lg bg-[var(--color-danger)]/10 border border-[var(--color-danger)]/20 text-xs text-[var(--color-danger)]">
@@ -303,5 +304,6 @@ export default function BotSettings() {
       </div>
     </div>
     {rechargeOpen && <RechargeModal onClose={() => setRechargeOpen(false)} />}
+    </>
   );
 }

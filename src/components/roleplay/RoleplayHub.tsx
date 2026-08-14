@@ -525,6 +525,7 @@ export default function RoleplayHub() {
   // ----- Chat view -----
   if (activeCard) {
     return (
+      <>
       <div className="flex flex-col h-full">
         {/* Header */}
           <div className="flex items-center gap-3 px-4 py-3 border-b border-[var(--color-border)]">
@@ -701,11 +702,13 @@ export default function RoleplayHub() {
         </div>
       </div>
       {rechargeOpen && <RechargeModal onClose={() => setRechargeOpen(false)} />}
+      </>
     );
   }
 
   // ----- Card list / editor view -----
   return (
+    <>
     <div className="h-full overflow-y-auto">
       <div className="max-w-3xl mx-auto px-4 sm:px-6 py-6">
         {/* Header */}
@@ -1133,5 +1136,6 @@ export default function RoleplayHub() {
       </div>
     </div>
     {rechargeOpen && <RechargeModal onClose={() => setRechargeOpen(false)} />}
+    </>
   );
 }

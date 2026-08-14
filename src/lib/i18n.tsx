@@ -386,6 +386,11 @@ const en = {
   "admin.users.setTitle": "Set account credentials",
   "admin.users.setDesc": "Give {name} a username and password to log in.",
   "admin.users.clearConfirm": "Remove {name}'s account? They will need an invite code to rejoin.",
+  "admin.users.cleanup": "Clean inactive",
+  "admin.users.cleanupHint": "Delete accounts inactive for over 7 days (admins are kept)",
+  "admin.users.cleanupConfirm": "Delete all accounts that haven't logged in for over 7 days? Admins are never deleted.",
+  "admin.users.cleanupDone": "Deleted {count} inactive account(s)",
+  "admin.users.cleanupNone": "No inactive accounts found",
   "admin.users.error": "Failed to load members",
 
   // Emergency recovery (admin escape hatch)
@@ -790,6 +795,11 @@ const zh: Record<keyof typeof en, string> = {
   "admin.users.setTitle": "设置账号凭据",
   "admin.users.setDesc": "为 {name} 设置用户名和密码以支持登录。",
   "admin.users.clearConfirm": "移除 {name} 的账号？他们需要新的邀请码才能重新加入。",
+  "admin.users.cleanup": "清理不活跃账号",
+  "admin.users.cleanupHint": "删除超过 7 天未登录的账号（管理员不会被删）",
+  "admin.users.cleanupConfirm": "删除所有超过 7 天未登录的账号？管理员永远不会被删除。",
+  "admin.users.cleanupDone": "已删除 {count} 个不活跃账号",
+  "admin.users.cleanupNone": "没有发现不活跃账号",
   "admin.users.error": "加载成员失败",
 
   // 紧急恢复（管理员逃生通道）

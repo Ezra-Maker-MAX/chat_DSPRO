@@ -65,7 +65,11 @@ export async function POST(req: NextRequest) {
     });
     await db
       .update(schema.users)
-      .set({ tokenHash: await hashToken(token) })
+      .set({
+        tokenHash: await hashToken(token),
+        lastSeen: new Date().toISOString(),
+        isOnline: true,
+      })
       .where(eq(schema.users.id, user.id));
 
     await setSessionCookie(token);

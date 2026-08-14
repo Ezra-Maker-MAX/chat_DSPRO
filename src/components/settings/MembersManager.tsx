@@ -35,6 +35,28 @@ export default function MembersManager() {
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [saving, setSaving] = useState(false);
+  const [cleaning, setCleaning] = useState(false);
+  const [cleanResult, setCleanResult] = useState("");
+
+  const runCleanup = async () => {
+    if (!window.confirm(t("admin.users.cleanupConfirm"))) return;
+    setCleaning(true);
+    setCleanResult("");
+    try {
+      const res = await fetch("/api/admin/cleanup", { method: "POST" });
+      const data = await res.json();
+      if (data.count != null) {
+        setCleanResult(data.count > 0 ? t("admin.users.cleanupDone", { count: data.count }) : t("admin.users.cleanupNone"));
+        await loadMembers();
+      } else {
+        setError(data.error || "cleanup failed");
+      }
+    } catch {
+      setError(t("billing.error.network"));
+    } finally {
+      setCleaning(false);
+    }
+  };
 
   const loadMembers = async () => {
     setLoading(true);
@@ -129,9 +151,20 @@ export default function MembersManager() {
           <Users size={16} className="text-[var(--color-teal)]" />
           <h3 className="font-semibold text-sm">{t("admin.users.title")}</h3>
         </div>
-        <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-[var(--color-bg-elevated)] text-[var(--color-text-muted)]">
-          {members.length}
-        </span>
+        <div className="flex items-center gap-2">
+          {cleanResult && (
+            <span className="text-[10px] text-[var(--color-teal)]">{cleanResult}</span>
+          )}
+          <button
+            onClick={runCleanup}
+            disabled={cleaning}
+            className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg border border-[var(--color-border)] text-[10px] text-[var(--color-text-secondary)] hover:bg-[var(--color-bg-hover)] hover:text-[var(--color-danger)] disabled:opacity-40 transition-colors"
+            title={t("admin.users.cleanupHint")}
+          >
+            {cleaning ? <Loader2 size={11} className="animate-spin" /> : <Trash2 size={11} />}
+            {t("admin.users.cleanup")}
+          </button>
+        </div>
       </div>
 
       <p className="text-xs text-[var(--color-text-muted)]">

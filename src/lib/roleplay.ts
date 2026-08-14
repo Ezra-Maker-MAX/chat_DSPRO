@@ -5,6 +5,7 @@ import { generateText } from "ai";
 import { getModelForTenant } from "@/lib/llm-gateway";
 import { ensureBotProfile } from "./bot";
 import { ensureTenantBalance } from "./deepseek-billing";
+import { bondDirective } from "./bond";
 import { chargeTokens } from "./pricing";
 
 // Sent when the tenant has no prepaid credit left — the frontend intercepts
@@ -45,6 +46,7 @@ export interface CharacterCardInput {
   emotes?: (string | null)[]; // 4-slot expression array (tavern Expression Media)
   visibility?: "public" | "admin_only" | null; // null/undefined = leave as-is on update
   adult?: boolean | null; // adult-content flag; null/undefined = leave as-is on update
+  tags?: string[] | null; // female-friendly vibe tags; null/undefined = leave as-is on update
 }
 
 export interface WorldBookEntryInput {
@@ -81,6 +83,11 @@ export async function saveCharacterCard(
     if (input.adult === undefined || input.adult === null) {
       delete updateFields.adult; // don't clobber existing adult flag when not provided
     }
+    if (Array.isArray(input.tags)) {
+      updateFields.tags = JSON.stringify(input.tags.slice(0, 5));
+    } else if (input.tags === undefined || input.tags === null) {
+      delete updateFields.tags; // don't clobber existing tags when not provided
+    }
     await db
       .update(schema.characterCards)
       .set(updateFields as any)
@@ -111,6 +118,7 @@ export async function saveCharacterCard(
     emotes: JSON.stringify(input.emotes ?? [null, null, null, null]),
     visibility: input.visibility === "admin_only" ? "admin_only" : "public",
     adult: !!input.adult,
+    tags: JSON.stringify(Array.isArray(input.tags) ? input.tags.slice(0, 5) : []),
   });
   return id;
 }
@@ -609,6 +617,8 @@ export async function generateCharacterReply(params: {
   authorNote?: string;
   /** 0..4 — the note is injected after the N most-recent turns (3 = default). */
   authorNoteDepth?: number;
+  /** 0..4 — bond/affection stage; injects the staged relationship directive. */
+  bondStage?: number;
 }): Promise<string> {
   const { tenantId, card, worldBook, history, userTurn } = params;
 
@@ -680,6 +690,11 @@ export async function generateCharacterReply(params: {
       : "",
     card.postHistoryInstructions
       ? `\n[After each reply]\n${card.postHistoryInstructions}`
+      : "",
+    // Bond layer — staged relationship directive (female-friendly slow-burn).
+    // 0=first meeting … 4=beloved; tone/intimacy escalate progressively.
+    typeof params.bondStage === "number"
+      ? `\n[Bond — relationship stage directive, follow strictly]\n${bondDirective(params.bondStage)}`
       : "",
     `\nAlways reply as ${characterName}. Never break character or mention being an AI.`,
   ]

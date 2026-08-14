@@ -263,6 +263,7 @@ export const INIT_SQL = [
   `ALTER TABLE character_cards ADD COLUMN emotes TEXT DEFAULT '[]'`,
   `ALTER TABLE character_cards ADD COLUMN visibility TEXT DEFAULT 'public'`,
   `ALTER TABLE character_cards ADD COLUMN adult INTEGER DEFAULT 0`,
+  `ALTER TABLE character_cards ADD COLUMN tags TEXT DEFAULT '[]'`,
 
   `CREATE TABLE IF NOT EXISTS roleplay_sessions (
     id TEXT PRIMARY KEY NOT NULL,
@@ -278,6 +279,8 @@ export const INIT_SQL = [
   )`,
   `ALTER TABLE roleplay_sessions ADD COLUMN author_note TEXT DEFAULT ''`,
   `ALTER TABLE roleplay_sessions ADD COLUMN author_note_depth INTEGER DEFAULT 3`,
+  `ALTER TABLE roleplay_sessions ADD COLUMN affection INTEGER DEFAULT 0`,
+  `ALTER TABLE roleplay_sessions ADD COLUMN last_bond_day TEXT`,
 
   // Seed: default demo tenant
   `INSERT OR IGNORE INTO tenants (id, name, slug, invite_code, description, max_members, allow_media, allow_voice, allow_video)

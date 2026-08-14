@@ -246,6 +246,8 @@ export const characterCards = sqliteTable("character_cards", {
   worldBookId: text("world_book_id").references(() => worldBooks.id),
   visibility: text("visibility").default("public"), // "public" | "admin_only" — admin_only hides the card from non-admins
   adult: integer("adult", { mode: "boolean" }).default(false), // adult content — only shown in the 18+ area
+  // Female-friendly vibe tags (JSON array of strings) — e.g. 温柔守护/霸道宠爱
+  tags: text("tags").default("[]"),
   isActive: integer("is_active", { mode: "boolean" }).default(true),
   createdAt: text("created_at").default(sql`(datetime('now'))`),
   updatedAt: text("updated_at").default(sql`(datetime('now'))`),
@@ -292,6 +294,10 @@ export const roleplaySessions = sqliteTable("roleplay_sessions", {
   authorNote: text("author_note").default(""),
   /** 0..4 — how many most-recent turns the note trails behind (3 = default). */
   authorNoteDepth: integer("author_note_depth").default(3),
+  /** Bond (affection) points — grows with each turn, gates relationship stages. */
+  affection: integer("affection").default(0),
+  /** ISO date (YYYY-MM-DD) of the last affection-gaining turn — daily bond bonus. */
+  lastBondDay: text("last_bond_day"),
   createdAt: text("created_at").default(sql`(datetime('now'))`),
   updatedAt: text("updated_at").default(sql`(datetime('now'))`),
 });

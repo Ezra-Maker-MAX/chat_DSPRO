@@ -18,8 +18,10 @@ import {
   Smile,
   Bookmark,
   Check,
+  Heart,
 } from "lucide-react";
 import RechargeModal from "@/components/billing/RechargeModal";
+import { VIBE_TAGS, parseTags } from "@/lib/tags";
 
 interface CharacterCard {
   id: string;
@@ -36,6 +38,7 @@ interface CharacterCard {
   emotes: (string | null)[];
   visibility?: "public" | "admin_only";
   adult?: boolean;
+  tags?: string | null;
   createdAt?: string | null;
 }
 
@@ -114,33 +117,47 @@ const DEFAULT_FIELDS = {
   emotes: [null, null, null, null] as (string | null)[],
   visibility: "public" as "public" | "admin_only",
   adult: false,
+  tags: [] as string[],
 };
 
 export default function RoleplayHub({
   adultOnly = false,
   sortBy,
+  tagFilter,
 }: {
   adultOnly?: boolean;
   sortBy?: "newest" | "name";
+  tagFilter?: string | null;
 }) {
   const { t } = useI18n();
+  // Loose i18n lookup for dynamic keys (bond stages, vibe tags).
+  const tr = (key: string) => (t as unknown as (k: string) => string)(key);
   const [cards, setCards] = useState<CharacterCard[]>([]);
   const [books, setBooks] = useState<WorldBook[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [currentRole, setCurrentRole] = useState<"admin" | "member">("member");
 
+  // Bond (affection) — relationship stage shown in the chat header.
+  const [affection, setAffection] = useState(0);
+  const [bond, setBond] = useState<{ index: number; key: string; progress: number; toNext: number | null } | null>(null);
+  const [stageUpNotice, setStageUpNotice] = useState<{ index: number; key: string } | null>(null);
+
   // Adult-zone ordering: newest first or alphabetical, applied purely client-side.
   const sortedCards = useMemo(() => {
-    if (!sortBy) return cards;
-    const copy = [...cards];
+    let list = cards;
+    if (tagFilter) {
+      list = list.filter((c) => parseTags(c.tags).includes(tagFilter));
+    }
+    if (!sortBy) return list;
+    const copy = [...list];
     if (sortBy === "newest") {
       copy.sort((a, b) => (b.createdAt || "").localeCompare(a.createdAt || ""));
     } else {
       copy.sort((a, b) => a.name.localeCompare(b.name));
     }
     return copy;
-  }, [cards, sortBy]);
+  }, [cards, sortBy, tagFilter]);
 
   // Card editor state
   const [editing, setEditing] = useState(false);
@@ -254,6 +271,10 @@ export default function RoleplayHub({
       // Author's Note (SillyTavern 全局指令微调) — per-session
       setAuthorNote(data.authorNote || "");
       setAuthorNoteDepth(data.authorNoteDepth ?? 3);
+      // Bond (affection) — relationship stage for this character
+      setAffection(data.affection ?? 0);
+      setBond(data.bond || null);
+      setStageUpNotice(null);
       // Seed first message if fresh session
       if (data.card?.firstMes && (!data.history || data.history.length === 0)) {
         setChat([{ role: "assistant", content: data.card.firstMes }]);
@@ -285,10 +306,8 @@ export default function RoleplayHub({
     }
   };
 
-  const sendMessage = async () => {
-    if (!activeCard || !input.trim() || sending) return;
-    const text = input.trim();
-    setInput("");
+  const postMessage = async (text: string) => {
+    if (!activeCard || sending) return;
     setChat((prev) => [...prev, { role: "user", content: text }]);
     setSending(true);
     try {
@@ -300,6 +319,15 @@ export default function RoleplayHub({
       const data = await res.json();
       if (typeof data.reply === "string" && data.reply) {
         setChat((prev) => [...prev, { role: "assistant", content: data.reply }]);
+        // Bond bookkeeping — update affection & stage, celebrate upgrades.
+        if (typeof data.affection === "number") setAffection(data.affection);
+        if (data.bond) {
+          setBond(data.bond);
+          if (data.stageUp) {
+            setStageUpNotice(data.stageUp);
+            setTimeout(() => setStageUpNotice(null), 6000);
+          }
+        }
         // Auto-switch the expression when the model's reply carries an emotion cue
         // (slot convention: 0=neutral 1=happy 2=angry 3=dazed). Only switch if that
         // slot actually has an image; otherwise keep the current expression.
@@ -324,6 +352,19 @@ export default function RoleplayHub({
     } finally {
       setSending(false);
     }
+  };
+
+  const sendMessage = () => {
+    if (!activeCard || !input.trim() || sending) return;
+    const text = input.trim();
+    setInput("");
+    postMessage(text);
+  };
+
+  // Daily-bond quick greetings — +2 affection and the character replies warmly.
+  const sendGreeting = (greeting: string) => {
+    if (!activeCard || sending) return;
+    postMessage(greeting);
   };
 
   const generateAvatar = async (slot: "avatar" | "0" | "1" | "2" | "3" = "avatar") => {
@@ -510,6 +551,7 @@ export default function RoleplayHub({
         : parseEmotes(card.emotes),
       visibility: card.visibility === "admin_only" ? "admin_only" : "public",
       adult: !!card.adult,
+      tags: parseTags(card.tags),
     });
     setAvatarPrompt("");
     setAvatarError("");
@@ -557,12 +599,32 @@ export default function RoleplayHub({
               className="w-9 h-9 rounded-full shrink-0"
             />
           <div className="flex-1 min-w-0">
-            <h2 className="font-[family-name:var(--font-display)] font-bold text-sm truncate">
+            <h2 className="font-[family-name:var(--font-display)] font-bold text-sm truncate" title={activeCard.description || ""}>
               {activeCard.name}
             </h2>
-            <p className="text-[11px] text-[var(--color-text-muted)] truncate">
-              {activeCard.description?.slice(0, 60) || t("rp.empty")}
-            </p>
+            {bond ? (
+              <div className="mt-1 flex items-center gap-1.5">
+                <span className="text-[var(--color-accent)]">
+                  <Heart size={11} fill="currentColor" />
+                </span>
+                <div className="h-1 w-20 overflow-hidden rounded-full bg-[var(--color-bg-elevated)]">
+                  <div
+                    className="h-full rounded-full bg-gradient-to-r from-[var(--color-accent)] to-[var(--color-accent-glow)] transition-all duration-500"
+                    style={{ width: `${bond.progress}%` }}
+                  />
+                </div>
+                <span className="text-[10px] font-medium text-[var(--color-accent-glow)]">
+                  {tr(`bond.stage.${bond.key}`)}
+                </span>
+                <span className="text-[9px] text-[var(--color-text-muted)]">
+                  {bond.toNext != null ? `${affection}·${t("bond.toNext", { n: bond.toNext })}` : `♥ ${affection}`}
+                </span>
+              </div>
+            ) : (
+              <p className="text-[11px] text-[var(--color-text-muted)] truncate">
+                {activeCard.description?.slice(0, 60) || t("rp.empty")}
+              </p>
+            )}
           </div>
           <button
             type="button"
@@ -700,6 +762,38 @@ export default function RoleplayHub({
 
         {/* Input */}
         <div className="border-t border-[var(--color-border)] px-4 py-3">
+          {stageUpNotice && (
+            <div className="mb-2 flex items-center gap-2 rounded-xl border border-[var(--color-accent)]/30 bg-[var(--color-accent-muted)] px-3 py-2 text-xs text-[var(--color-accent-glow)] animate-fade-in">
+              <Heart size={13} fill="currentColor" className="shrink-0" />
+              <span className="font-medium">
+                {t("bond.upgraded", { name: activeCard.name })}
+              </span>
+              <span className="text-[var(--color-text-muted)]">
+                {tr(`bond.stage.${stageUpNotice.key}`)}
+              </span>
+            </div>
+          )}
+          <div className="mb-2 flex items-center gap-2">
+            <button
+              onClick={() => sendGreeting("早安")}
+              disabled={sending}
+              className="inline-flex items-center gap-1 rounded-lg border border-[var(--color-border)] bg-[var(--color-bg-elevated)] px-2.5 py-1 text-[11px] text-[var(--color-text-secondary)] hover:border-[var(--color-accent)] hover:text-[var(--color-text-primary)] disabled:opacity-40 transition-colors"
+              title={t("bond.greetingHint")}
+            >
+              🌅 {t("bond.greeting.morning")}
+            </button>
+            <button
+              onClick={() => sendGreeting("晚安")}
+              disabled={sending}
+              className="inline-flex items-center gap-1 rounded-lg border border-[var(--color-border)] bg-[var(--color-bg-elevated)] px-2.5 py-1 text-[11px] text-[var(--color-text-secondary)] hover:border-[var(--color-accent)] hover:text-[var(--color-text-primary)] disabled:opacity-40 transition-colors"
+              title={t("bond.greetingHint")}
+            >
+              🌙 {t("bond.greeting.night")}
+            </button>
+            <span className="text-[10px] text-[var(--color-text-muted)]">
+              {t("bond.greetingBonus")}
+            </span>
+          </div>
           <div className="flex items-end gap-2">
             <textarea
               value={input}
@@ -933,6 +1027,44 @@ export default function RoleplayHub({
                   </button>
                 </div>
               )}
+              {/* Vibe tags — female-friendly archetypes (multi-select) */}
+              <div className="rounded-lg border border-[var(--color-border)] px-3 py-2.5 bg-[var(--color-bg-input)]">
+                <label className="block text-xs text-[var(--color-text-secondary)]">
+                  <span className="inline-flex items-center gap-1">
+                    <Heart size={11} className="text-[var(--color-accent)]" fill="currentColor" />
+                    {t("rp.tags.title")}
+                  </span>
+                </label>
+                <p className="text-[10px] text-[var(--color-text-muted)] mt-0.5 mb-2">
+                  {t("rp.tags.hint")}
+                </p>
+                <div className="flex flex-wrap gap-1.5">
+                  {VIBE_TAGS.map((tag) => {
+                    const on = form.tags.includes(tag);
+                    return (
+                      <button
+                        key={tag}
+                        type="button"
+                        onClick={() =>
+                          setForm((f) => ({
+                            ...f,
+                            tags: on
+                              ? f.tags.filter((x) => x !== tag)
+                              : [...f.tags, tag].slice(0, 5),
+                          }))
+                        }
+                        className={`rounded-full px-2.5 py-1 text-[11px] transition-all ${
+                          on
+                            ? "bg-[var(--color-accent)] text-white shadow-[0_0_10px_rgba(255,45,85,0.35)]"
+                            : "border border-[var(--color-border)] text-[var(--color-text-secondary)] hover:border-[var(--color-accent)] hover:text-[var(--color-text-primary)]"
+                        }`}
+                      >
+                        {tr(`rp.tags.${tag}`)}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
               <div>
                 <label className="block text-xs text-[var(--color-text-muted)] mb-1">{t("rp.avatar")}</label>
                 <div className="flex items-start gap-3">
@@ -1184,6 +1316,18 @@ export default function RoleplayHub({
                   <h3 className="truncate font-[family-name:var(--font-display)] text-sm font-bold leading-tight">
                     {card.name}
                   </h3>
+                  {parseTags(card.tags).length > 0 && (
+                    <div className="flex flex-wrap gap-1">
+                      {parseTags(card.tags).slice(0, 3).map((tag) => (
+                        <span
+                          key={tag}
+                          className="rounded-full border border-[var(--color-accent)]/25 bg-[var(--color-accent-muted)] px-1.5 py-0.5 text-[9px] text-[var(--color-accent-glow)]"
+                        >
+                          ♥ {tr(`rp.tags.${tag}`)}
+                        </span>
+                      ))}
+                    </div>
+                  )}
                   <p className="line-clamp-1 text-[11px] text-[var(--color-text-secondary)]">
                     {card.description || t("rp.empty")}
                   </p>

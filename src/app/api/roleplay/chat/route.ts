@@ -12,6 +12,7 @@ import {
   setAuthorNote,
 } from "@/lib/roleplay";
 import { detectEmotion } from "@/lib/emotion";
+import { getBondStage, MAX_AFFECTION_CAP } from "@/lib/bond";
 
 /**
  * POST /api/roleplay/chat
@@ -62,6 +63,22 @@ export async function POST(req: NextRequest) {
   const history = await getSessionHistory(rpSession.id);
   const author = await getAuthorNote(rpSession.id);
 
+  // ---- Bond (affection) bookkeeping — female-friendly slow-burn ----
+  const oldAffection = rpSession.affection ?? 0;
+  const bond = getBondStage(oldAffection);
+  const today = new Date().toISOString().slice(0, 10);
+  const isFirstToday = rpSession.lastBondDay !== today;
+  const isGreeting = /(早安|早上好|早呀|晚安|晚好|good ?morning|good ?night)/i.test(userTurn);
+  const gain = 1 + (isFirstToday ? 2 : 0) + (isGreeting ? 2 : 0); // first-of-day +3, greeting +3, both +5
+  const newAffection = Math.min(MAX_AFFECTION_CAP, oldAffection + gain);
+  const newBond = getBondStage(newAffection);
+  const stageUp = newBond.index > bond.index ? newBond : null;
+
+  await db
+    .update(schema.roleplaySessions)
+    .set({ affection: newAffection, lastBondDay: today })
+    .where(eq(schema.roleplaySessions.id, rpSession.id));
+
   // If this is a fresh session, seed the character's opening line
   const isFirstTurn = history.length === 0;
   let firstMes: string | null = null;
@@ -78,6 +95,7 @@ export async function POST(req: NextRequest) {
       userTurn,
       authorNote: author.note,
       authorNoteDepth: author.depth,
+      bondStage: newBond.index,
     });
 
     await appendSessionMessages(rpSession.id, [
@@ -91,6 +109,15 @@ export async function POST(req: NextRequest) {
       emotion: detectEmotion(reply),
       firstMes,
       sessionId: rpSession.id,
+      affection: newAffection,
+      bond: {
+        index: newBond.index,
+        key: newBond.key,
+        progress: newBond.progress,
+        toNext: newBond.toNext,
+      },
+      gain,
+      stageUp: stageUp ? { index: stageUp.index, key: stageUp.key } : null,
     });
   } catch (err) {
     // Insufficient credit → tell the frontend to open the recharge modal.
@@ -144,6 +171,8 @@ export async function GET(req: NextRequest) {
     worldBook: result.worldBook,
     authorNote: author.note,
     authorNoteDepth: author.depth,
+    affection: rpSession.affection ?? 0,
+    bond: getBondStage(rpSession.affection ?? 0),
   });
 }
 

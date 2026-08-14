@@ -27,12 +27,15 @@ interface RosterMember {
  */
 export default function AdultPage() {
   const { t } = useI18n();
+  const tr = (key: string) => (t as unknown as (k: string) => string)(key);
   const [granted, setGranted] = useState<boolean | null>(null);
   const [confirmed, setConfirmed] = useState<boolean>(() => hasAdultConsent());
   const [cardCount, setCardCount] = useState<number | null>(null);
   const [sortBy, setSortBy] = useState<"newest" | "name" | undefined>(undefined);
   const [roster, setRoster] = useState<RosterMember[]>([]);
   const [rosterOpen, setRosterOpen] = useState(false);
+  const [allTags, setAllTags] = useState<string[]>([]);
+  const [tagFilter, setTagFilter] = useState<string | null>(null);
 
   const loadRoster = () => {
     fetch("/api/profile?kind=nsfw&all=1")
@@ -50,12 +53,25 @@ export default function AdultPage() {
       .catch(() => setGranted(false));
   }, []);
 
-  // Real stat for the hero band: count of adult cards.
+  // Real stat for the hero band: count of adult cards + vibe-tag union.
   useEffect(() => {
     if (granted !== true) return;
     fetch("/api/characters?adult=1")
       .then((r) => r.json())
-      .then((data) => setCardCount(Array.isArray(data.cards) ? data.cards.length : null))
+      .then((data) => {
+        const cards = Array.isArray(data.cards) ? data.cards : [];
+        setCardCount(cards.length);
+        const tags = new Set<string>();
+        for (const c of cards) {
+          try {
+            const arr = JSON.parse(c.tags || "[]");
+            if (Array.isArray(arr)) arr.forEach((x: unknown) => typeof x === "string" && tags.add(x));
+          } catch {
+            /* ignore malformed tags */
+          }
+        }
+        setAllTags([...tags]);
+      })
       .catch(() => setCardCount(null));
     loadRoster();
   }, [granted]);
@@ -220,11 +236,27 @@ export default function AdultPage() {
         >
           {t("adult.tabs.name")}
         </button>
+
+        {/* Vibe-tag filter — female-friendly archetypes */}
+        {allTags.length > 0 && (
+          <span className="mx-1 h-4 w-px bg-[var(--color-border)]" aria-hidden="true" />
+        )}
+        {allTags.map((tag) => (
+          <button
+            key={tag}
+            onClick={() => setTagFilter(tagFilter === tag ? null : tag)}
+            className={`adult-pill rounded-full px-3 py-1.5 text-[11px] font-medium ${
+              tagFilter === tag ? "adult-pill-active" : ""
+            }`}
+          >
+            ♥ {tr(`rp.tags.${tag}`)}
+          </button>
+        ))}
       </div>
 
       {/* ---------- ③ Gallery: scrolling card grid (re-skins via .adult-theme) ---------- */}
       <div className="flex-1 overflow-hidden">
-        <RoleplayHub adultOnly sortBy={sortBy} />
+        <RoleplayHub adultOnly sortBy={sortBy} tagFilter={tagFilter} />
       </div>
 
       {/* ---------- ⑤ Footer disclaimer ---------- */}

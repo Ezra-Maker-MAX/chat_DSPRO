@@ -56,6 +56,7 @@ export default async function TenantLayout({
       onlineCount={onlineCount}
       userId={payload.userId}
       nickname={payload.nickname}
+      avatarSeed={me?.avatarSeed || ""}
       userRole={payload.role}
       adultEnabled={adultEnabled}
       allowMedia={tenant.allowMedia}

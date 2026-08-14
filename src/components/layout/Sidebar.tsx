@@ -12,10 +12,13 @@ import {
   UserPlus,
   Sparkles,
   HeartCrack,
+  Pencil,
 } from "lucide-react";
 import InviteModal from "./InviteModal";
 import NewSpaceModal from "./NewSpaceModal";
 import LanguageSwitcher from "./LanguageSwitcher";
+import UserAvatar from "@/components/ui/UserAvatar";
+import UserProfileModal from "@/components/profile/UserProfileModal";
 import { useI18n } from "@/lib/i18n";
 
 interface Channel {
@@ -31,6 +34,8 @@ interface SidebarProps {
   channels: Channel[];
   onlineCount: number;
   currentChannelId?: string;
+  nickname?: string;
+  avatarSeed?: string;
   userRole: string;
   adultEnabled?: boolean;
   open?: boolean;
@@ -43,6 +48,8 @@ export default function Sidebar({
   channels,
   onlineCount,
   currentChannelId,
+  nickname = "",
+  avatarSeed = "",
   userRole,
   adultEnabled = false,
   open = false,
@@ -54,6 +61,7 @@ export default function Sidebar({
   const [isLoggingOut, setIsLoggingOut] = useState(false);
   const [showInvite, setShowInvite] = useState(false);
   const [showNewSpace, setShowNewSpace] = useState(false);
+  const [profileOpen, setProfileOpen] = useState(false);
 
   const handleLogout = async () => {
     setIsLoggingOut(true);
@@ -215,10 +223,33 @@ export default function Sidebar({
         <div className="pt-1 border-t border-[var(--color-border)]">
           <LanguageSwitcher />
         </div>
+
+        {/* User zone — SFW profile entry */}
+        <div className="mt-1 border-t border-[var(--color-border)] px-2 pt-2">
+          <button
+            onClick={() => setProfileOpen(true)}
+            className="w-full flex items-center gap-2.5 rounded-xl px-2 py-2 text-left hover:bg-[var(--color-bg-hover)] transition-colors"
+            title={t("profile.edit")}
+          >
+            <UserAvatar seed={avatarSeed || "usr_default"} nickname={nickname || "?"} size={34} />
+            <div className="flex-1 min-w-0">
+              <div className="text-sm font-medium text-[var(--color-text-primary)] truncate">
+                {nickname || t("profile.unknown")}
+              </div>
+              <div className="text-[10px] text-[var(--color-text-muted)]">
+                {userRole === "admin" ? t("profile.roleAdmin") : t("profile.roleMember")}
+              </div>
+            </div>
+            <span className="shrink-0 rounded-lg border border-[var(--color-border)] p-1.5 text-[var(--color-text-muted)] hover:text-[var(--color-accent)] hover:border-[var(--color-accent)] transition-colors">
+              <Pencil size={12} />
+            </span>
+          </button>
+        </div>
       </div>
 
       {showInvite && <InviteModal onClose={() => setShowInvite(false)} />}
       {showNewSpace && <NewSpaceModal onClose={() => setShowNewSpace(false)} />}
+      <UserProfileModal mode="sfw" open={profileOpen} onClose={() => setProfileOpen(false)} />
     </aside>
   );
 }

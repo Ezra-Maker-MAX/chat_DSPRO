@@ -35,6 +35,8 @@ export const INIT_SQL = [
   `ALTER TABLE users ADD COLUMN username TEXT`,
   `ALTER TABLE users ADD COLUMN password_hash TEXT`,
   `ALTER TABLE users ADD COLUMN adult_enabled INTEGER DEFAULT 0`,
+  `ALTER TABLE users ADD COLUMN profile_sfw TEXT`,
+  `ALTER TABLE users ADD COLUMN profile_nsfw TEXT`,
   `CREATE UNIQUE INDEX IF NOT EXISTS user_tenant_nickname ON users(tenant_id, nickname)`,
   `CREATE UNIQUE INDEX IF NOT EXISTS user_tenant_username ON users(tenant_id, username)`,
 

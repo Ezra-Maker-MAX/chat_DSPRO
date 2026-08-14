@@ -29,6 +29,9 @@ export const users = sqliteTable("users", {
   isOnline: integer("is_online", { mode: "boolean" }).default(false),
   lastSeen: text("last_seen").default(sql`(datetime('now'))`),
   adultEnabled: integer("adult_enabled", { mode: "boolean" }).default(false), // admin-granted access to the 18+ zone
+  // User-editable profiles. Each holds JSON: { avatarUrl?: string|null, fields: {k,v}[] }
+  profileSfw: text("profile_sfw"),
+  profileNsfw: text("profile_nsfw"), // shown only inside the 18+ zone
   createdAt: text("created_at").default(sql`(datetime('now'))`),
 }, (table) => [
   uniqueIndex("user_tenant_nickname").on(table.tenantId, table.nickname),

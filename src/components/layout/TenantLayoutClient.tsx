@@ -20,6 +20,7 @@ interface Props {
   onlineCount: number;
   userId: string;
   nickname: string;
+  avatarSeed: string;
   userRole: string;
   adultEnabled: boolean;
   allowMedia: boolean;
@@ -35,6 +36,7 @@ export default function TenantLayoutClient({
   onlineCount,
   userId,
   nickname,
+  avatarSeed,
   userRole,
   adultEnabled,
   children,
@@ -68,6 +70,8 @@ export default function TenantLayoutClient({
             isDefault: c.isDefault ?? false,
           }))}
           onlineCount={onlineCount}
+          nickname={nickname}
+          avatarSeed={avatarSeed}
           userRole={userRole}
           adultEnabled={adultEnabled}
           open={sidebarOpen}

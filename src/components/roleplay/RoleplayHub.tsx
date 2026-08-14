@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef, useCallback, type ChangeEvent } from "react";
+import { useState, useEffect, useRef, useCallback, useMemo, type ChangeEvent } from "react";
 import { useI18n } from "@/lib/i18n";
 import {
   Bot,
@@ -36,6 +36,7 @@ interface CharacterCard {
   emotes: (string | null)[];
   visibility?: "public" | "admin_only";
   adult?: boolean;
+  createdAt?: string | null;
 }
 
 /** Avatar thumbnail that falls back to the gradient Bot icon on missing/broken URL. */
@@ -115,13 +116,31 @@ const DEFAULT_FIELDS = {
   adult: false,
 };
 
-export default function RoleplayHub({ adultOnly = false }: { adultOnly?: boolean }) {
+export default function RoleplayHub({
+  adultOnly = false,
+  sortBy,
+}: {
+  adultOnly?: boolean;
+  sortBy?: "newest" | "name";
+}) {
   const { t } = useI18n();
   const [cards, setCards] = useState<CharacterCard[]>([]);
   const [books, setBooks] = useState<WorldBook[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [currentRole, setCurrentRole] = useState<"admin" | "member">("member");
+
+  // Adult-zone ordering: newest first or alphabetical, applied purely client-side.
+  const sortedCards = useMemo(() => {
+    if (!sortBy) return cards;
+    const copy = [...cards];
+    if (sortBy === "newest") {
+      copy.sort((a, b) => (b.createdAt || "").localeCompare(a.createdAt || ""));
+    } else {
+      copy.sort((a, b) => a.name.localeCompare(b.name));
+    }
+    return copy;
+  }, [cards, sortBy]);
 
   // Card editor state
   const [editing, setEditing] = useState(false);
@@ -1077,7 +1096,7 @@ export default function RoleplayHub({ adultOnly = false }: { adultOnly?: boolean
         )}
 
         {/* Card grid */}
-        {cards.length === 0 && !editing ? (
+        {sortedCards.length === 0 && !editing ? (
           <div className="flex flex-col items-center justify-center py-16 text-center gap-3">
             <div className="w-14 h-14 rounded-2xl bg-[var(--color-teal-muted)] flex items-center justify-center">
               <Sparkles size={24} className="text-[var(--color-teal)]" />
@@ -1089,7 +1108,7 @@ export default function RoleplayHub({ adultOnly = false }: { adultOnly?: boolean
           </div>
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
-            {cards.map((card) => (
+            {sortedCards.map((card) => (
               <div
                 key={card.id}
                 className="group relative flex flex-col overflow-hidden rounded-2xl border border-[var(--color-border)] bg-[var(--color-bg-card)] transition-all duration-300 hover:-translate-y-1.5 hover:border-[var(--color-accent)]/50 hover:shadow-[0_18px_44px_-14px_rgba(108,92,231,0.45)]"

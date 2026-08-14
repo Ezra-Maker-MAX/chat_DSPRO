@@ -30,7 +30,7 @@ export default function AdultGate({ onConfirm }: { onConfirm: () => void }) {
   };
 
   return (
-    <div className="flex min-h-[70vh] items-center justify-center p-4">
+    <div className="adult-theme flex min-h-[70vh] items-center justify-center p-4">
       <div className="w-full max-w-md overflow-hidden rounded-2xl border border-[var(--color-danger)]/30 bg-[var(--color-bg-card)] shadow-[0_20px_60px_rgba(0,0,0,0.5)]">
         {/* Top bar */}
         <div className="h-1.5 bg-gradient-to-r from-[var(--color-danger)] via-[var(--color-accent)] to-[var(--color-danger)]" />

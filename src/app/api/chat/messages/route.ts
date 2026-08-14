@@ -7,6 +7,7 @@ import { postBotTextMessage, ensureBotUser, readChannelContext } from "@/lib/bot
 import { getModelForTenant } from "@/lib/llm-gateway";
 import { generateText } from "ai";
 import { ensureTenantBalance } from "@/lib/deepseek-billing";
+import { chargeTokens } from "@/lib/pricing";
 
 /** True when the given user id is the synthetic bot row. */
 async function isBotUser(userId: string): Promise<boolean> {
@@ -71,12 +72,23 @@ async function replyWithBot(params: {
     if (params.repliedToSnippet) {
       messages.push({ role: "user" as const, content: `${params.nickname}: ${params.text}` });
     }
-    const { text } = await generateText({
+    const { text, usage } = await generateText({
       model: routed.provider.model(routed.provider.modelId),
       system,
       messages,
       temperature: 0.8,
     });
+    // Per-model pricing charge
+    if (usage) {
+      const total = (usage as { totalTokens?: number }).totalTokens ?? 0;
+      await chargeTokens(
+        params.tenantId,
+        routed.provider.provider as string,
+        routed.provider.modelId,
+        Math.ceil(total / 2),
+        Math.ceil(total / 2)
+      ).catch(() => {});
+    }
     await postBotTextMessage({
       tenantId: params.tenantId,
       channelId: params.channelId,

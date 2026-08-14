@@ -5,6 +5,7 @@ import { generateText } from "ai";
 import { getModelForTenant } from "@/lib/llm-gateway";
 import { ensureBotProfile } from "./bot";
 import { ensureTenantBalance } from "./deepseek-billing";
+import { chargeTokens } from "./pricing";
 
 // Sent when the tenant has no prepaid credit left — the frontend intercepts
 // this to show the recharge modal instead of a generic error.
@@ -15,23 +16,15 @@ export class InsufficientCreditError extends Error {
   }
 }
 
-/** Charge the tenant for `tokens` at DeepSeek chat pricing (¥/1M tokens). */
+/** Legacy alias — per-model pricing lives in pricing.ts. */
 export async function chargeTenant(
   tenantId: string,
   inputTokens: number,
-  outputTokens: number
+  outputTokens: number,
+  provider = "deepseek",
+  model = "default"
 ) {
-  // DeepSeek official pricing (CNY per 1M tokens) — override per tenant later
-  // if needed. deepseek-chat ≈ ¥2 in / ¥8 out; treat as a flat ~¥5/M blend.
-  const PRICE_PER_1M = 5; // ¥ per 1M tokens (blend of input+output)
-  const costCents = Math.ceil(((inputTokens + outputTokens) / 1_000_000) * PRICE_PER_1M * 100);
-  if (costCents <= 0) return;
-  const bal = await ensureTenantBalance(tenantId);
-  const next = (bal.balanceCents ?? 0) - costCents;
-  await db
-    .update(schema.tenantBalances)
-    .set({ balanceCents: Math.max(0, next), updatedAt: new Date().toISOString() })
-    .where(eq(schema.tenantBalances.id, bal.id));
+  return chargeTokens(tenantId, provider, model, inputTokens, outputTokens);
 }
 
 // ============================================================
@@ -717,7 +710,13 @@ export async function generateCharacterReply(params: {
   // Deduct cost from prepaid balance (usage.totalTokens is AI SDK v4's sum).
   if (usage) {
     const total = (usage as { totalTokens?: number }).totalTokens ?? 0;
-    await chargeTenant(tenantId, Math.ceil(total / 2), Math.ceil(total / 2));
+    await chargeTokens(
+      tenantId,
+      routed.provider.provider as string,
+      routed.provider.modelId,
+      Math.ceil(total / 2),
+      Math.ceil(total / 2)
+    );
   }
 
   return text || "(the character fell silent...)";

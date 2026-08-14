@@ -3,6 +3,7 @@ import { eq, and, desc, asc } from "drizzle-orm";
 import { generateId } from "@/lib/utils";
 import { put } from "@vercel/blob";
 import { broadcastToChannel } from "@/lib/sse";
+import { chargeImage } from "./pricing";
 
 // ============================================================
 // Bot core service: profile, message reading, image queue, post
@@ -151,6 +152,9 @@ export async function generateImage(
   if (!b64 && !url) {
     throw new Error("Image API returned no data (no b64_json or url). Check gateway config.");
   }
+
+  // Charge the tenant for the generated image (per-model selling price).
+  await chargeImage(profile.tenantId, provider, model).catch(() => {});
 
   // If the gateway returned a direct URL, skip re-upload and return it.
   if (url) {

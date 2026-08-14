@@ -150,6 +150,22 @@ export const rechargeOrders = sqliteTable("recharge_orders", {
   confirmedAt: text("confirmed_at"),
 });
 
+/** Per-tenant LLM/image pricing rules (盈利模式：分模型定价)。
+ *  - `provider` + `model` identify a rule; "default" in model = wildcard fallback.
+ *  - Prices are in CNY cents per 1M tokens (input/output) and per image.
+ *  - Rates are the *selling* price the admin charges users (cost × markup). */
+export const tenantPricing = sqliteTable("tenant_pricing", {
+  id: text("id").primaryKey(),
+  tenantId: text("tenant_id").notNull().references(() => tenants.id),
+  provider: text("provider").notNull(), // "deepseek" | "openai" | "anthropic" | "google" | "custom"
+  model: text("model").notNull().default("default"), // model id, or "default"
+  inputCentsPer1m: integer("input_cents_per_1m").default(0), // ¥/1M input tokens (cents)
+  outputCentsPer1m: integer("output_cents_per_1m").default(0), // ¥/1M output tokens (cents)
+  imageCentsPerUnit: integer("image_cents_per_unit").default(0), // ¥ per image
+}, (table) => [
+  uniqueIndex("tp_tenant_provider_model").on(table.tenantId, table.provider, table.model),
+]);
+
 // ============== MCP Plugins (installed per tenant) ==============
 export const mcpPlugins = sqliteTable("mcp_plugins", {
   id: text("id").primaryKey(),

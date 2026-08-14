@@ -138,6 +138,17 @@ export const INIT_SQL = [
     confirmed_at TEXT
   )`,
 
+  `CREATE TABLE IF NOT EXISTS tenant_pricing (
+    id TEXT PRIMARY KEY NOT NULL,
+    tenant_id TEXT NOT NULL REFERENCES tenants(id),
+    provider TEXT NOT NULL,
+    model TEXT NOT NULL DEFAULT 'default',
+    input_cents_per_1m INTEGER DEFAULT 0,
+    output_cents_per_1m INTEGER DEFAULT 0,
+    image_cents_per_unit INTEGER DEFAULT 0
+  )`,
+  `CREATE UNIQUE INDEX IF NOT EXISTS tp_tenant_provider_model ON tenant_pricing(tenant_id, provider, model)`,
+
   `CREATE TABLE IF NOT EXISTS mcp_plugins (
     id TEXT PRIMARY KEY NOT NULL,
     tenant_id TEXT NOT NULL REFERENCES tenants(id),

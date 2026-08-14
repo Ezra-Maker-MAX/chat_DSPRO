@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getSession } from "@/lib/auth";
 import { getModelForTenant } from "@/lib/llm-gateway";
 import { ensureTenantBalance } from "@/lib/deepseek-billing";
+import { chargeTokens } from "@/lib/pricing";
 import { streamText } from "ai";
 
 export async function POST(req: NextRequest) {
@@ -49,6 +50,19 @@ export async function POST(req: NextRequest) {
       messages: fullMessages,
       temperature,
       maxTokens,
+      onFinish: async (finish) => {
+        // Per-model pricing charge once the stream completes.
+        const total = (finish.usage as { totalTokens?: number } | undefined)?.totalTokens ?? 0;
+        if (total > 0) {
+          await chargeTokens(
+            session.tenantId,
+            routed.provider.provider as string,
+            routed.provider.modelId,
+            Math.ceil(total / 2),
+            Math.ceil(total / 2)
+          ).catch(() => {});
+        }
+      },
     });
 
     return result.toDataStreamResponse();

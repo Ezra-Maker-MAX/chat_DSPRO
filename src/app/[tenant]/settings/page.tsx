@@ -2,13 +2,14 @@
 
 import { useState, useEffect } from "react";
 import { useI18n } from "@/lib/i18n";
-import { Settings, Cpu, Plus, Trash2, Loader2, Check, Key, Globe, Bot, BookOpen, UserCircle, Users, LifeBuoy, Route, ArrowDownUp } from "lucide-react";
+import { Settings, Cpu, Plus, Trash2, Loader2, Check, Key, Globe, Bot, BookOpen, UserCircle, Users, LifeBuoy, Route, ArrowDownUp, Tag } from "lucide-react";
 import BotSettings from "@/components/settings/BotSettings";
 import WorldBooksManager from "@/components/settings/WorldBooksManager";
 import AccountPanel from "@/components/settings/AccountPanel";
 import MembersManager from "@/components/settings/MembersManager";
 import RecoveryPanel from "@/components/settings/RecoveryPanel";
 import GatewayPanel from "@/components/settings/GatewayPanel";
+import PricingPanel from "@/components/settings/PricingPanel";
 import { useLayout } from "@/components/layout/LayoutContext";
 
 interface LLM {
@@ -531,6 +532,17 @@ export default function SettingsPage() {
               <h2 className="font-semibold text-sm">{t("admin.users.section")}</h2>
             </div>
             <MembersManager />
+          </section>
+        )}
+
+        {/* Pricing (admin only) */}
+        {isAdmin && (
+          <section className="mt-8">
+            <div className="flex items-center gap-2 mb-4">
+              <Tag size={16} className="text-[var(--color-accent-glow)]" />
+              <h2 className="font-semibold text-sm">{t("pricing.section")}</h2>
+            </div>
+            <PricingPanel />
           </section>
         )}
 

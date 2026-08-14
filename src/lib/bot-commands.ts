@@ -1,6 +1,7 @@
 import { generateText } from "ai";
 import { getModelForTenant } from "@/lib/llm-gateway";
 import { ensureTenantBalance } from "./deepseek-billing";
+import { chargeTokens } from "./pricing";
 import {
   ensureBotProfile,
   enqueueImageJob,
@@ -179,12 +180,24 @@ async function chatWithContext(ctx: BotCommandContext, userText: string) {
     { role: "user" as const, content: `${ctx.nickname}: ${userText}` },
   ];
 
-  const { text } = await generateText({
+  const { text, usage } = await generateText({
     model: routed.provider.model(routed.provider.modelId),
     system: systemPrompt,
     messages,
     temperature: 0.8,
   });
+
+  // Per-model pricing charge
+  if (usage) {
+    const total = (usage as { totalTokens?: number }).totalTokens ?? 0;
+    await chargeTokens(
+      ctx.tenantId,
+      routed.provider.provider as string,
+      routed.provider.modelId,
+      Math.ceil(total / 2),
+      Math.ceil(total / 2)
+    ).catch(() => {});
+  }
 
   await postBotTextMessage({
     tenantId: ctx.tenantId,

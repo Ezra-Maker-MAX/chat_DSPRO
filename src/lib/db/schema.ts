@@ -301,3 +301,15 @@ export const roleplaySessions = sqliteTable("roleplay_sessions", {
   createdAt: text("created_at").default(sql`(datetime('now'))`),
   updatedAt: text("updated_at").default(sql`(datetime('now'))`),
 });
+
+// ============== Frontend Error Telemetry ==============
+export const appErrors = sqliteTable("app_errors", {
+  id: text("id").primaryKey(),
+  tenantId: text("tenant_id").references(() => tenants.id),
+  userId: text("user_id").references(() => users.id),
+  type: text("type").notNull(), // "error" | "unhandledrejection" | "console"
+  message: text("message").default(""),
+  stack: text("stack"),
+  url: text("url"),
+  createdAt: text("created_at").default(sql`(datetime('now'))`),
+});

@@ -267,7 +267,7 @@ export default function RechargeModal({ onClose }: RechargeModalProps) {
                       width={220}
                       height={220}
                       className="rounded-lg"
-                    />
+                    loading="lazy" decoding="async" />
                     <p className="text-xs text-[var(--color-text-secondary)] text-center leading-relaxed">
                       {t("billing.scanHint")}
                     </p>

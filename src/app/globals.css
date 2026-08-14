@@ -265,6 +265,18 @@ body {
   color: #fff;
   box-shadow: 0 0 18px rgba(255, 45, 85, 0.45);
 }
+
+/* ---- Reduced motion: honor OS preference (a11y) ---- */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
 .adult-pill-active:hover {
   color: #fff;
 }

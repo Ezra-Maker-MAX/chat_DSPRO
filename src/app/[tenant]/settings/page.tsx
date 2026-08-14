@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { useI18n } from "@/lib/i18n";
-import { Settings, Cpu, Plus, Trash2, Loader2, Check, Key, Globe, Bot, BookOpen, UserCircle, Users, LifeBuoy, Route, ArrowDownUp, Tag } from "lucide-react";
+import { Settings, Cpu, Plus, Trash2, Loader2, Check, Key, Globe, Bot, BookOpen, UserCircle, Users, LifeBuoy, Route, ArrowDownUp, Tag, Bug } from "lucide-react";
 import BotSettings from "@/components/settings/BotSettings";
 import WorldBooksManager from "@/components/settings/WorldBooksManager";
 import AccountPanel from "@/components/settings/AccountPanel";
@@ -10,6 +10,7 @@ import MembersManager from "@/components/settings/MembersManager";
 import RecoveryPanel from "@/components/settings/RecoveryPanel";
 import GatewayPanel from "@/components/settings/GatewayPanel";
 import PricingPanel from "@/components/settings/PricingPanel";
+import ErrorLogPanel from "@/components/settings/ErrorLogPanel";
 import { useLayout } from "@/components/layout/LayoutContext";
 
 interface LLM {
@@ -543,6 +544,17 @@ export default function SettingsPage() {
               <h2 className="font-semibold text-sm">{t("pricing.section")}</h2>
             </div>
             <PricingPanel />
+          </section>
+        )}
+
+        {/* Error log (admin only) */}
+        {isAdmin && (
+          <section className="mt-8">
+            <div className="flex items-center gap-2 mb-4">
+              <Bug size={16} className="text-[var(--color-warning)]" />
+              <h2 className="font-semibold text-sm">{t("admin.errors.section")}</h2>
+            </div>
+            <ErrorLogPanel />
           </section>
         )}
 

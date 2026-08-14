@@ -282,6 +282,17 @@ export const INIT_SQL = [
   `ALTER TABLE roleplay_sessions ADD COLUMN affection INTEGER DEFAULT 0`,
   `ALTER TABLE roleplay_sessions ADD COLUMN last_bond_day TEXT`,
 
+  `CREATE TABLE IF NOT EXISTS app_errors (
+    id TEXT PRIMARY KEY NOT NULL,
+    tenant_id TEXT REFERENCES tenants(id),
+    user_id TEXT REFERENCES users(id),
+    type TEXT NOT NULL,
+    message TEXT DEFAULT '',
+    stack TEXT,
+    url TEXT,
+    created_at TEXT DEFAULT (datetime('now'))
+  )`,
+
   // Seed: default demo tenant
   `INSERT OR IGNORE INTO tenants (id, name, slug, invite_code, description, max_members, allow_media, allow_voice, allow_video)
    VALUES ('tnt_demo0000000001', 'Demo Space', 'demo-space', 'DEMO-CODE-1234',

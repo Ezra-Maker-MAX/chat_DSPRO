@@ -242,7 +242,7 @@ export default function MessageInput({ channelId, onSend, allowMedia, allowVoice
               className="relative group rounded-lg overflow-hidden border border-[var(--color-border)]"
             >
               {m.type === "image" && (
-                <img src={m.url} alt={m.name} className="h-16 w-16 object-cover" />
+                <img src={m.url} alt={m.name} className="h-16 w-16 object-cover" loading="lazy" decoding="async" />
               )}
               {m.type === "audio" && (
                 <div className="h-16 w-40 flex items-center px-3 bg-[var(--color-bg-elevated)]">

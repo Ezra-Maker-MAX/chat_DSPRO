@@ -4,6 +4,7 @@ import { useState } from "react";
 import Sidebar from "./Sidebar";
 import ParticleBackground from "./ParticleBackground";
 import { LayoutContextProvider } from "./LayoutContext";
+import ErrorReporter from "@/components/telemetry/ErrorReporter";
 import { Menu } from "lucide-react";
 
 interface Channel {
@@ -48,6 +49,7 @@ export default function TenantLayoutClient({
 
   return (
     <LayoutContextProvider value={{ openSidebar, userId, nickname, userRole }}>
+      <ErrorReporter />
       <div className="flex h-dvh overflow-hidden relative">
         <ParticleBackground accentColor="267, 75%, 65%" particleCount={20} />
 

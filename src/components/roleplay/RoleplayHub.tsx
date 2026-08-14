@@ -51,6 +51,7 @@ function AvatarBox({ url, className }: { url: string | null | undefined; classNa
         src={url}
         alt=""
         className={`${className} object-cover`}
+        loading="lazy" decoding="async"
         onError={() => setFailed(true)}
       />
     );
@@ -78,6 +79,7 @@ function CardCover({ url, name }: { url: string | null | undefined; name: string
         src={url}
         alt=""
         className="absolute inset-0 h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
+        loading="lazy" decoding="async"
         onError={() => setFailed(true)}
       />
     );
@@ -715,7 +717,7 @@ export default function RoleplayHub({
                     }`}
                   >
                     {url ? (
-                      <img src={url} alt="" className="h-full w-full object-cover" />
+                      <img src={url} alt="" className="h-full w-full object-cover" loading="lazy" decoding="async" />
                     ) : (
                       <div className="flex h-full w-full items-center justify-center bg-[var(--color-bg-input)] text-[10px] text-[var(--color-text-muted)]">
                         {i + 1}
@@ -1149,7 +1151,7 @@ export default function RoleplayHub({
                             src={url}
                             alt=""
                             className="absolute inset-0 h-full w-full object-cover"
-                          />
+                          loading="lazy" decoding="async" />
                         ) : (
                           <div className="absolute inset-0 flex flex-col items-center justify-center gap-0.5 text-[var(--color-text-muted)]">
                             <span className="font-[family-name:var(--font-display)] text-base">

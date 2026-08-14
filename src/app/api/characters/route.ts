@@ -31,6 +31,20 @@ export async function GET(req: NextRequest) {
   }
   const adultParam = new URL(req.url).searchParams.get("adult");
   const adultOnly = adultParam === "1" ? true : adultParam === "0" ? false : undefined;
+
+  // Server-side gate: non-admins need adultEnabled to fetch adult cards —
+  // prevents direct-URL access to the 18+ zone from leaking content.
+  if (adultOnly === true && session.role !== "admin") {
+    const [me] = await db
+      .select({ adultEnabled: schema.users.adultEnabled })
+      .from(schema.users)
+      .where(eq(schema.users.id, session.userId))
+      .limit(1);
+    if (!me?.adultEnabled) {
+      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+    }
+  }
+
   const cards = await listCharacterCards(session.tenantId, session.role, adultOnly);
   // Expose the caller's role so the frontend can show/hide the visibility
   // control and the "admin only" badge without an extra request.

@@ -108,6 +108,7 @@ const DEFAULT_FIELDS = {
   mesExample: "",
   systemPrompt: "",
   postHistoryInstructions: "",
+  worldBookId: null as string | null,
   avatarUrl: "",
   emotes: [null, null, null, null] as (string | null)[],
   visibility: "public" as "public" | "admin_only",

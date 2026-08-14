@@ -21,6 +21,7 @@ export async function GET() {
       hasAccount: schema.users.passwordHash,
       isOnline: schema.users.isOnline,
       lastSeen: schema.users.lastSeen,
+      adultEnabled: schema.users.adultEnabled,
     })
     .from(schema.users)
     .where(eq(schema.users.tenantId, session.tenantId));
@@ -56,6 +57,15 @@ export async function POST(req: NextRequest) {
     .limit(1);
   if (!target || target.tenantId !== session.tenantId) {
     return NextResponse.json({ error: "User not found" }, { status: 404 });
+  }
+
+  // Toggle 18+ zone access for this member (admin only — already gated above).
+  if (typeof body.adultEnabled === "boolean") {
+    await db
+      .update(schema.users)
+      .set({ adultEnabled: body.adultEnabled })
+      .where(eq(schema.users.id, userId));
+    return NextResponse.json({ success: true, adultEnabled: body.adultEnabled });
   }
 
   // Clear account

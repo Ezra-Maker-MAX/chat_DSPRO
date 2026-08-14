@@ -27,12 +27,14 @@ export const INIT_SQL = [
     password_hash TEXT,
     is_online INTEGER DEFAULT 0,
     last_seen TEXT DEFAULT (datetime('now')),
+    adult_enabled INTEGER DEFAULT 0,
     created_at TEXT DEFAULT (datetime('now'))
   )`,
   // Add account columns to existing deployments FIRST so indexes below can reference them.
   // Idempotent: on fresh DBs the columns already exist, so these are skipped as "duplicate column name".
   `ALTER TABLE users ADD COLUMN username TEXT`,
   `ALTER TABLE users ADD COLUMN password_hash TEXT`,
+  `ALTER TABLE users ADD COLUMN adult_enabled INTEGER DEFAULT 0`,
   `CREATE UNIQUE INDEX IF NOT EXISTS user_tenant_nickname ON users(tenant_id, nickname)`,
   `CREATE UNIQUE INDEX IF NOT EXISTS user_tenant_username ON users(tenant_id, username)`,
 

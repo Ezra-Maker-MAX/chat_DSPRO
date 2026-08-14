@@ -21,6 +21,7 @@ interface Props {
   userId: string;
   nickname: string;
   userRole: string;
+  adultEnabled: boolean;
   allowMedia: boolean;
   allowVoice: boolean;
   allowVideo: boolean;
@@ -35,6 +36,7 @@ export default function TenantLayoutClient({
   userId,
   nickname,
   userRole,
+  adultEnabled,
   children,
 }: Props) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -67,6 +69,7 @@ export default function TenantLayoutClient({
           }))}
           onlineCount={onlineCount}
           userRole={userRole}
+          adultEnabled={adultEnabled}
           open={sidebarOpen}
           onClose={closeSidebar}
         />

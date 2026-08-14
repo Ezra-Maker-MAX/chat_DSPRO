@@ -32,6 +32,7 @@ interface SidebarProps {
   onlineCount: number;
   currentChannelId?: string;
   userRole: string;
+  adultEnabled?: boolean;
   open?: boolean;
   onClose?: () => void;
 }
@@ -43,6 +44,7 @@ export default function Sidebar({
   onlineCount,
   currentChannelId,
   userRole,
+  adultEnabled = false,
   open = false,
   onClose,
 }: SidebarProps) {
@@ -163,6 +165,7 @@ export default function Sidebar({
           {t("sidebar.games")}
         </Link>
 
+        {(userRole === "admin" || adultEnabled) && (
         <Link
           href={`/${tenantSlug}/adult`}
           onClick={onClose}
@@ -181,6 +184,7 @@ export default function Sidebar({
             18+
           </span>
         </Link>
+        )}
 
         <Link
           href={`/${tenantSlug}/settings`}

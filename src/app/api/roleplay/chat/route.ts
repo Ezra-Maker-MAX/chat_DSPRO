@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getSession } from "@/lib/auth";
+import { db, schema } from "@/lib/db";
+import { eq } from "drizzle-orm";
 import {
   getCharacterCard,
   getOrCreateSession,
@@ -42,6 +44,17 @@ export async function POST(req: NextRequest) {
   // Non-admins may not chat with admin-only cards (same defense as the list).
   if (session.role !== "admin" && result.card.visibility === "admin_only") {
     return NextResponse.json({ error: "Character not found" }, { status: 404 });
+  }
+  // Non-admins need adultEnabled to chat with adult cards (18+ gate).
+  if (session.role !== "admin" && result.card.adult) {
+    const [me] = await db
+      .select({ adultEnabled: schema.users.adultEnabled })
+      .from(schema.users)
+      .where(eq(schema.users.id, session.userId))
+      .limit(1);
+    if (!me?.adultEnabled) {
+      return NextResponse.json({ error: "Character not found" }, { status: 404 });
+    }
   }
   const { card, worldBook } = result;
 
@@ -113,6 +126,16 @@ export async function GET(req: NextRequest) {
   }
   if (session.role !== "admin" && result.card.visibility === "admin_only") {
     return NextResponse.json({ error: "Character not found" }, { status: 404 });
+  }
+  if (session.role !== "admin" && result.card.adult) {
+    const [me] = await db
+      .select({ adultEnabled: schema.users.adultEnabled })
+      .from(schema.users)
+      .where(eq(schema.users.id, session.userId))
+      .limit(1);
+    if (!me?.adultEnabled) {
+      return NextResponse.json({ error: "Character not found" }, { status: 404 });
+    }
   }
   return NextResponse.json({
     sessionId: rpSession.id,

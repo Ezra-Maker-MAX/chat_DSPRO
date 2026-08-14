@@ -10,6 +10,7 @@ import {
   ShieldCheck,
   KeyRound,
   X,
+  HeartCrack,
 } from "lucide-react";
 
 interface Member {
@@ -19,6 +20,7 @@ interface Member {
   username: string | null;
   hasAccount: boolean;
   isOnline: boolean | null;
+  adultEnabled?: boolean | null;
 }
 
 /**
@@ -55,6 +57,24 @@ export default function MembersManager() {
       setError(t("billing.error.network"));
     } finally {
       setCleaning(false);
+    }
+  };
+
+  const toggleAdult = async (m: Member, value: boolean) => {
+    try {
+      const res = await fetch("/api/admin/users", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ userId: m.id, adultEnabled: value }),
+      });
+      const data = await res.json();
+      if (data.error) {
+        setError(data.error);
+        return;
+      }
+      await loadMembers();
+    } catch {
+      setError(t("billing.error.network"));
     }
   };
 
@@ -216,6 +236,19 @@ export default function MembersManager() {
               </div>
 
               <div className="flex items-center gap-1">
+                {/* 18+ zone grant — admin can enable/disable per member */}
+                <button
+                  onClick={() => toggleAdult(m, !m.adultEnabled)}
+                  className={`flex items-center gap-1 px-2 py-1 rounded-md text-[10px] transition-colors ${
+                    m.adultEnabled
+                      ? "bg-[var(--color-danger)]/15 text-[var(--color-danger)]"
+                      : "bg-[var(--color-bg-hover)] text-[var(--color-text-muted)] hover:text-[var(--color-text-secondary)]"
+                  }`}
+                  title={t("admin.users.adultHint")}
+                >
+                  <HeartCrack size={10} />
+                  18+
+                </button>
                 {m.hasAccount ? (
                   <button
                     onClick={() => openEdit(m)}

@@ -39,12 +39,14 @@ export default async function TenantLayout({
     .from(schema.channels)
     .where(eq(schema.channels.tenantId, tenant.id));
 
-  // Get online count
+  // Get online count + current user's 18+ grant (server-side, no extra roundtrip)
   const users = await db
     .select()
     .from(schema.users)
     .where(eq(schema.users.tenantId, tenant.id));
   const onlineCount = users.filter((u) => u.isOnline).length;
+  const me = users.find((u) => u.id === payload.userId);
+  const adultEnabled = payload.role === "admin" ? true : !!me?.adultEnabled;
 
   return (
     <TenantLayoutClient
@@ -55,6 +57,7 @@ export default async function TenantLayout({
       userId={payload.userId}
       nickname={payload.nickname}
       userRole={payload.role}
+      adultEnabled={adultEnabled}
       allowMedia={tenant.allowMedia}
       allowVoice={tenant.allowVoice}
       allowVideo={tenant.allowVideo}

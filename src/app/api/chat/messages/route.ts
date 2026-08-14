@@ -6,6 +6,7 @@ import { generateId } from "@/lib/utils";
 import { postBotTextMessage, ensureBotUser, readChannelContext } from "@/lib/bot";
 import { getModelForTenant } from "@/lib/llm-gateway";
 import { generateText } from "ai";
+import { ensureTenantBalance } from "@/lib/deepseek-billing";
 
 /** True when the given user id is the synthetic bot row. */
 async function isBotUser(userId: string): Promise<boolean> {
@@ -41,6 +42,16 @@ async function replyWithBot(params: {
         tenantId: params.tenantId,
         channelId: params.channelId,
         content: "⚠️ No LLM provider is configured. Add one in Settings → AI Providers, then try again.",
+      });
+      return;
+    }
+    // Credit gate — skip generation (post a friendly notice) when out of credit.
+    const bal = await ensureTenantBalance(params.tenantId);
+    if ((bal.balanceCents ?? 0) <= 0) {
+      await postBotTextMessage({
+        tenantId: params.tenantId,
+        channelId: params.channelId,
+        content: "⚠️ 空间额度已用完，请管理员充值后再试。",
       });
       return;
     }

@@ -80,6 +80,10 @@ export async function POST(req: NextRequest) {
       sessionId: rpSession.id,
     });
   } catch (err) {
+    // Insufficient credit → tell the frontend to open the recharge modal.
+    if (err instanceof Error && err.message === "INSUFFICIENT_CREDIT") {
+      return NextResponse.json({ error: "INSUFFICIENT_CREDIT", code: "insufficient_credit" }, { status: 402 });
+    }
     const msg = err instanceof Error ? err.message : "Roleplay generation failed";
     return NextResponse.json({ error: msg }, { status: 500 });
   }

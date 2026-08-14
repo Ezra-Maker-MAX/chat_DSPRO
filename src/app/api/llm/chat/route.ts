@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getSession } from "@/lib/auth";
 import { getModelForTenant } from "@/lib/llm-gateway";
+import { ensureTenantBalance } from "@/lib/deepseek-billing";
 import { streamText } from "ai";
 
 export async function POST(req: NextRequest) {
@@ -15,6 +16,15 @@ export async function POST(req: NextRequest) {
 
     if (!messages || !Array.isArray(messages)) {
       return NextResponse.json({ error: "messages array required" }, { status: 400 });
+    }
+
+    // Credit gate — block when prepaid balance is exhausted.
+    const bal = await ensureTenantBalance(session.tenantId);
+    if ((bal.balanceCents ?? 0) <= 0) {
+      return NextResponse.json({
+        error: "INSUFFICIENT_CREDIT",
+        code: "insufficient_credit",
+      }, { status: 402 });
     }
 
     // Get the appropriate model for this tenant

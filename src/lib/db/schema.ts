@@ -123,6 +123,33 @@ export const llmRoutes = sqliteTable("llm_routes", {
   createdAt: text("created_at").default(sql`(datetime('now'))`),
 });
 
+// ============== LLM Billing (per-tenant credit balance + DeepSeek recharge) ==============
+/** Per-tenant LLM credit balance, in cents (CNY). Shared across all members. */
+export const tenantBalances = sqliteTable("tenant_balances", {
+  id: text("id").primaryKey(),
+  tenantId: text("tenant_id").notNull().references(() => tenants.id),
+  balanceCents: integer("balance_cents").default(0), // remaining prepaid credit
+  updatedAt: text("updated_at").default(sql`(datetime('now'))`),
+}, (table) => [
+  uniqueIndex("tb_tenant").on(table.tenantId),
+]);
+
+/** DeepSeek top-up orders — user picks an amount, pays on DeepSeek's page,
+ *  and we verify via /user/balance delta before crediting the tenant. */
+export const rechargeOrders = sqliteTable("recharge_orders", {
+  id: text("id").primaryKey(),
+  tenantId: text("tenant_id").notNull().references(() => tenants.id),
+  userId: text("user_id").notNull().references(() => users.id),
+  amountCents: integer("amount_cents").notNull(), // requested top-up (CNY cents)
+  currency: text("currency").default("CNY"),
+  status: text("status").default("pending"), // pending | confirmed | failed
+  deepseekBefore: text("deepseek_before"), // topped_up_balance snapshot at order creation
+  deepseekAfter: text("deepseek_after"), // topped_up_balance at confirmation
+  note: text("note"),
+  createdAt: text("created_at").default(sql`(datetime('now'))`),
+  confirmedAt: text("confirmed_at"),
+});
+
 // ============== MCP Plugins (installed per tenant) ==============
 export const mcpPlugins = sqliteTable("mcp_plugins", {
   id: text("id").primaryKey(),

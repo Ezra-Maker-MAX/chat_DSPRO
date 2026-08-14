@@ -2,8 +2,9 @@
 
 import { useState, useEffect } from "react";
 import { useI18n } from "@/lib/i18n";
-import { Bot, Save, Loader2, Check, Image } from "lucide-react";
+import { Bot, Save, Loader2, Check, Image, Wallet } from "lucide-react";
 import GatewayPanel from "./GatewayPanel";
+import RechargeModal from "@/components/billing/RechargeModal";
 
 interface BotProfile {
   id: string;
@@ -26,6 +27,8 @@ export default function BotSettings() {
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
   const [error, setError] = useState("");
+  const [balanceCents, setBalanceCents] = useState<number | null>(null);
+  const [rechargeOpen, setRechargeOpen] = useState(false);
 
   // Form state
   const [name, setName] = useState("");
@@ -39,6 +42,12 @@ export default function BotSettings() {
   const [imageCooldownMs, setImageCooldownMs] = useState(180000);
 
   useEffect(() => {
+    fetch("/api/billing/status")
+      .then((r) => r.json())
+      .then((data) => {
+        if (typeof data.balanceCents === "number") setBalanceCents(data.balanceCents);
+      })
+      .catch(() => {});
     fetch("/api/bot/profile")
       .then((r) => r.json())
       .then((data) => {
@@ -110,6 +119,32 @@ export default function BotSettings() {
       {error && (
         <div className="p-3 rounded-lg bg-[var(--color-danger)]/10 border border-[var(--color-danger)]/20 text-xs text-[var(--color-danger)]">
           {error}
+        </div>
+      )}
+
+      {/* Space credit */}
+      {balanceCents !== null && (
+        <div className="glass-card p-4 flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div className="w-9 h-9 rounded-lg bg-[var(--color-accent-muted)] flex items-center justify-center">
+              <Wallet size={16} className="text-[var(--color-accent-glow)]" />
+            </div>
+            <div>
+              <p className="text-[10px] uppercase tracking-wider text-[var(--color-text-muted)]">
+                {t("billing.balance")}
+              </p>
+              <p className="text-lg font-bold font-mono text-[var(--color-accent-glow)]">
+                ¥{((balanceCents ?? 0) / 100).toFixed(2)}
+              </p>
+            </div>
+          </div>
+          <button
+            onClick={() => setRechargeOpen(true)}
+            className="flex items-center gap-1.5 px-3 py-2 rounded-lg bg-[var(--color-accent)] text-white text-xs font-medium hover:bg-[var(--color-accent-glow)] transition-colors"
+          >
+            <Wallet size={13} />
+            {t("billing.title")}
+          </button>
         </div>
       )}
 
@@ -267,5 +302,6 @@ export default function BotSettings() {
         )}
       </div>
     </div>
+    {rechargeOpen && <RechargeModal onClose={() => setRechargeOpen(false)} />}
   );
 }

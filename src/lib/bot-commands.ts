@@ -1,5 +1,6 @@
 import { generateText } from "ai";
 import { getModelForTenant } from "@/lib/llm-gateway";
+import { ensureTenantBalance } from "./deepseek-billing";
 import {
   ensureBotProfile,
   enqueueImageJob,
@@ -151,6 +152,17 @@ async function chatWithContext(ctx: BotCommandContext, userText: string) {
       tenantId: ctx.tenantId,
       channelId: ctx.channelId,
       content: "⚠️ No LLM provider is configured. Add one in Settings → AI Providers, then try again.",
+    });
+    return;
+  }
+
+  // Credit gate — refuse when prepaid balance is exhausted.
+  const bal = await ensureTenantBalance(ctx.tenantId);
+  if ((bal.balanceCents ?? 0) <= 0) {
+    await postBotTextMessage({
+      tenantId: ctx.tenantId,
+      channelId: ctx.channelId,
+      content: "⚠️ 空间额度已用完，请管理员充值后再试。",
     });
     return;
   }

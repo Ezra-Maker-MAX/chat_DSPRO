@@ -19,6 +19,7 @@ import {
   Bookmark,
   Check,
 } from "lucide-react";
+import RechargeModal from "@/components/billing/RechargeModal";
 
 interface CharacterCard {
   id: string;
@@ -143,6 +144,7 @@ export default function RoleplayHub() {
   const [authorNoteDepth, setAuthorNoteDepth] = useState(3);
   const [authorNoteOpen, setAuthorNoteOpen] = useState(false);
   const [authorNoteSaving, setAuthorNoteSaving] = useState(false);
+  const [rechargeOpen, setRechargeOpen] = useState(false);
   const chatEndRef = useRef<HTMLDivElement>(null);
 
   /** Parse the API's JSON-encoded `emotes` column into a 4-slot array. */
@@ -291,6 +293,9 @@ export default function RoleplayHub() {
         }
       } else if (data.error) {
         setChat((prev) => [...prev, { role: "assistant", content: `⚠️ ${data.error}` }]);
+        if (data.code === "insufficient_credit" || String(data.error).includes("INSUFFICIENT_CREDIT")) {
+          setRechargeOpen(true);
+        }
       }
     } catch {
       setChat((prev) => [...prev, { role: "assistant", content: t("rp.error.network") }]);
@@ -695,6 +700,7 @@ export default function RoleplayHub() {
           </div>
         </div>
       </div>
+      {rechargeOpen && <RechargeModal onClose={() => setRechargeOpen(false)} />}
     );
   }
 
@@ -1126,5 +1132,6 @@ export default function RoleplayHub() {
         )}
       </div>
     </div>
+    {rechargeOpen && <RechargeModal onClose={() => setRechargeOpen(false)} />}
   );
 }

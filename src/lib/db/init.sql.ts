@@ -116,6 +116,28 @@ export const INIT_SQL = [
     created_at TEXT DEFAULT (datetime('now'))
   )`,
 
+  `CREATE TABLE IF NOT EXISTS tenant_balances (
+    id TEXT PRIMARY KEY NOT NULL,
+    tenant_id TEXT NOT NULL REFERENCES tenants(id),
+    balance_cents INTEGER DEFAULT 0,
+    updated_at TEXT DEFAULT (datetime('now'))
+  )`,
+  `CREATE UNIQUE INDEX IF NOT EXISTS tb_tenant ON tenant_balances(tenant_id)`,
+
+  `CREATE TABLE IF NOT EXISTS recharge_orders (
+    id TEXT PRIMARY KEY NOT NULL,
+    tenant_id TEXT NOT NULL REFERENCES tenants(id),
+    user_id TEXT NOT NULL REFERENCES users(id),
+    amount_cents INTEGER NOT NULL,
+    currency TEXT DEFAULT 'CNY',
+    status TEXT DEFAULT 'pending',
+    deepseek_before TEXT,
+    deepseek_after TEXT,
+    note TEXT,
+    created_at TEXT DEFAULT (datetime('now')),
+    confirmed_at TEXT
+  )`,
+
   `CREATE TABLE IF NOT EXISTS mcp_plugins (
     id TEXT PRIMARY KEY NOT NULL,
     tenant_id TEXT NOT NULL REFERENCES tenants(id),

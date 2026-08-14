@@ -11,6 +11,7 @@ import {
   LogOut,
   UserPlus,
   Sparkles,
+  HeartCrack,
 } from "lucide-react";
 import InviteModal from "./InviteModal";
 import NewSpaceModal from "./NewSpaceModal";
@@ -160,6 +161,25 @@ export default function Sidebar({
         >
           <Gamepad2 size={16} />
           {t("sidebar.games")}
+        </Link>
+
+        <Link
+          href={`/${tenantSlug}/adult`}
+          onClick={onClose}
+          className={`
+            flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm transition-all duration-150
+            ${
+              pathname.includes("/adult")
+                ? "bg-[var(--color-danger)]/15 text-[var(--color-danger)]"
+                : "text-[var(--color-text-secondary)] hover:bg-[var(--color-danger)]/10 hover:text-[var(--color-danger)]"
+            }
+          `}
+        >
+          <HeartCrack size={16} />
+          <span className="flex-1">{t("sidebar.adult")}</span>
+          <span className="rounded bg-[var(--color-danger)]/20 px-1.5 py-0.5 text-[9px] font-bold text-[var(--color-danger)]">
+            18+
+          </span>
         </Link>
 
         <Link

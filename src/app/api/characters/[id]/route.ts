@@ -89,6 +89,7 @@ export async function PUT(req: NextRequest, { params }: Params) {
             ? "admin_only"
             : "public"
           : undefined,
+      adult: session.role === "admin" ? !!body.adult : undefined,
     },
     id
   );

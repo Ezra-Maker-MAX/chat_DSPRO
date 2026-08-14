@@ -44,6 +44,7 @@ export interface CharacterCardInput {
   avatarUrl?: string | null;
   emotes?: (string | null)[]; // 4-slot expression array (tavern Expression Media)
   visibility?: "public" | "admin_only" | null; // null/undefined = leave as-is on update
+  adult?: boolean | null; // adult-content flag; null/undefined = leave as-is on update
 }
 
 export interface WorldBookEntryInput {
@@ -77,6 +78,9 @@ export async function saveCharacterCard(
     if (input.visibility === undefined || input.visibility === null) {
       delete updateFields.visibility; // don't clobber existing visibility when not provided
     }
+    if (input.adult === undefined || input.adult === null) {
+      delete updateFields.adult; // don't clobber existing adult flag when not provided
+    }
     await db
       .update(schema.characterCards)
       .set(updateFields as any)
@@ -106,6 +110,7 @@ export async function saveCharacterCard(
     avatarUrl: input.avatarUrl || null,
     emotes: JSON.stringify(input.emotes ?? [null, null, null, null]),
     visibility: input.visibility === "admin_only" ? "admin_only" : "public",
+    adult: !!input.adult,
   });
   return id;
 }
@@ -113,20 +118,30 @@ export async function saveCharacterCard(
 /**
  * List character cards for a tenant.
  * Non-admins only see cards whose visibility is "public"; admins see everything.
+ * adultOnly: true → only adult cards; false → exclude adult cards; undefined → all.
  */
-export async function listCharacterCards(tenantId: string, role?: string) {
+export async function listCharacterCards(
+  tenantId: string,
+  role?: string,
+  adultOnly?: boolean
+) {
   const isAdmin = role === "admin";
+  const base = isAdmin
+    ? eq(schema.characterCards.tenantId, tenantId)
+    : and(
+        eq(schema.characterCards.tenantId, tenantId),
+        eq(schema.characterCards.visibility, "public")
+      );
+  const cond =
+    adultOnly === true
+      ? and(base, eq(schema.characterCards.adult, true))
+      : adultOnly === false
+        ? and(base, eq(schema.characterCards.adult, false))
+        : base;
   const cards = await db
     .select()
     .from(schema.characterCards)
-    .where(
-      isAdmin
-        ? eq(schema.characterCards.tenantId, tenantId)
-        : and(
-            eq(schema.characterCards.tenantId, tenantId),
-            eq(schema.characterCards.visibility, "public")
-          )
-    )
+    .where(cond)
     .orderBy(asc(schema.characterCards.createdAt));
   return cards;
 }

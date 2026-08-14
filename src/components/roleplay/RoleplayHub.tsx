@@ -35,6 +35,7 @@ interface CharacterCard {
   avatarUrl: string | null;
   emotes: (string | null)[];
   visibility?: "public" | "admin_only";
+  adult?: boolean;
 }
 
 /** Avatar thumbnail that falls back to the gradient Bot icon on missing/broken URL. */
@@ -110,9 +111,10 @@ const DEFAULT_FIELDS = {
   avatarUrl: "",
   emotes: [null, null, null, null] as (string | null)[],
   visibility: "public" as "public" | "admin_only",
+  adult: false,
 };
 
-export default function RoleplayHub() {
+export default function RoleplayHub({ adultOnly = false }: { adultOnly?: boolean }) {
   const { t } = useI18n();
   const [cards, setCards] = useState<CharacterCard[]>([]);
   const [books, setBooks] = useState<WorldBook[]>([]);
@@ -165,7 +167,7 @@ export default function RoleplayHub() {
 
     // Load characters — never let world-book failure block this.
     try {
-      const cardsRes = await fetch("/api/characters");
+      const cardsRes = await fetch(adultOnly ? "/api/characters?adult=1" : "/api/characters?adult=0");
       const cardsData = await cardsRes.json().catch(() => ({} as any));
       if (!cardsRes.ok || cardsData.error) {
         throw new Error(cardsData.error || `HTTP ${cardsRes.status}`);
@@ -208,7 +210,7 @@ export default function RoleplayHub() {
       );
     } else if (errors.length > 0) console.warn("[RoleplayHub] Partial load failed:", errors.join(", "));
     setLoading(false);
-  }, [t]);
+  }, [adultOnly, t]);
 
   useEffect(() => {
     fetchAll();
@@ -487,6 +489,7 @@ export default function RoleplayHub() {
         ? card.emotes
         : parseEmotes(card.emotes),
       visibility: card.visibility === "admin_only" ? "admin_only" : "public",
+      adult: !!card.adult,
     });
     setAvatarPrompt("");
     setAvatarError("");
@@ -878,6 +881,38 @@ export default function RoleplayHub() {
                   </button>
                 </div>
               )}
+              {/* Adult content — admin only. Adult cards only appear in the 18+ area. */}
+              {currentRole === "admin" && (
+                <div className="flex items-center justify-between rounded-lg border border-[var(--color-border)] px-3 py-2.5 bg-[var(--color-bg-input)]">
+                  <div className="flex-1 min-w-0">
+                    <label className="block text-xs text-[var(--color-text-secondary)]">
+                      {t("rp.adult.title")}
+                    </label>
+                    <p className="text-[10px] text-[var(--color-text-muted)] mt-0.5">
+                      {t("rp.adult.hint")}
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    role="switch"
+                    aria-checked={!!form.adult}
+                    onClick={() =>
+                      setForm((f) => ({ ...f, adult: !f.adult }))
+                    }
+                    className={`relative h-6 w-11 shrink-0 rounded-full transition-colors ${
+                      form.adult
+                        ? "bg-[var(--color-danger)]"
+                        : "bg-[var(--color-bg-hover)]"
+                    }`}
+                  >
+                    <span
+                      className={`absolute top-0.5 h-5 w-5 rounded-full bg-white shadow transition-all ${
+                        form.adult ? "left-[22px]" : "left-0.5"
+                      }`}
+                    />
+                  </button>
+                </div>
+              )}
               <div>
                 <label className="block text-xs text-[var(--color-text-muted)] mb-1">{t("rp.avatar")}</label>
                 <div className="flex items-start gap-3">
@@ -1083,6 +1118,17 @@ export default function RoleplayHub() {
                   {card.visibility === "admin_only" && (
                     <span className="absolute left-2.5 top-9 inline-flex items-center gap-1 rounded-full bg-[var(--color-accent)]/90 px-2 py-0.5 text-[10px] font-medium text-white backdrop-blur">
                       <KeyRound size={10} /> {t("rp.visibility.adminOnly")}
+                    </span>
+                  )}
+
+                  {/* Adult badge — top-left, stacked below other chips */}
+                  {card.adult && (
+                    <span
+                      className={`absolute left-2.5 inline-flex items-center gap-1 rounded-full bg-[var(--color-danger)]/90 px-2 py-0.5 text-[10px] font-bold text-white backdrop-blur ${
+                        card.visibility === "admin_only" ? "top-[52px]" : "top-9"
+                      }`}
+                    >
+                      {t("rp.adult.badge")}
                     </span>
                   )}
 

@@ -24,12 +24,14 @@ function normalizeEmotes(raw: unknown): (string | null)[] {
  * POST /api/characters — create a character card
  * Body: { name, description?, personality?, scenario?, firstMes?, mesExample?, systemPrompt?, postHistoryInstructions?, worldBookId? }
  */
-export async function GET() {
+export async function GET(req: NextRequest) {
   const session = await getSession();
   if (!session) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
-  const cards = await listCharacterCards(session.tenantId, session.role);
+  const adultParam = new URL(req.url).searchParams.get("adult");
+  const adultOnly = adultParam === "1" ? true : adultParam === "0" ? false : undefined;
+  const cards = await listCharacterCards(session.tenantId, session.role, adultOnly);
   // Expose the caller's role so the frontend can show/hide the visibility
   // control and the "admin only" badge without an extra request.
   return NextResponse.json({ cards, role: session.role || "member" });
@@ -84,6 +86,7 @@ export async function POST(req: NextRequest) {
       session.role === "admin" && body.visibility === "admin_only"
         ? "admin_only"
         : "public",
+    adult: session.role === "admin" ? !!body.adult : undefined,
   });
 
   return NextResponse.json({ success: true, id });
@@ -160,6 +163,7 @@ export async function PATCH(req: NextRequest) {
           ? "admin_only"
           : "public"
         : undefined,
+    adult: session.role === "admin" ? !!body.adult : undefined,
   }, id);
 
   return NextResponse.json({ success: true, id });

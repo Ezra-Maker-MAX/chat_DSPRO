@@ -986,10 +986,17 @@ const DICTIONARIES: Record<Locale, Record<keyof typeof en, string>> = { en, zh }
 
 export type TKey = keyof typeof en;
 
+// `t` accepts known literal keys for type safety AND arbitrary strings for
+// dynamic keys (e.g. `rp.emotes.slot${n}`, `bond.stage.${key}`).
+export interface I18nT {
+  (key: TKey, params?: Record<string, string | number>): string;
+  (key: string, params?: Record<string, string | number>): string;
+}
+
 interface I18nContextValue {
   locale: Locale;
   setLocale: (l: Locale) => void;
-  t: (key: TKey, params?: Record<string, string | number>) => string;
+  t: I18nT;
 }
 
 const I18nContext = createContext<I18nContextValue | null>(null);
@@ -1026,9 +1033,10 @@ export function I18nProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const t = useCallback(
-    (key: TKey, params?: Record<string, string | number>) => {
+    (key: string, params?: Record<string, string | number>) => {
       const dict = DICTIONARIES[locale] || en;
-      const template = dict[key] ?? en[key] ?? key;
+      const template =
+        (dict as Record<string, string>)[key] ?? (en as Record<string, string>)[key] ?? key;
       return interpolate(template, params);
     },
     [locale]
@@ -1045,7 +1053,11 @@ export function useI18n() {
   const ctx = useContext(I18nContext);
   if (!ctx) {
     // Safe fallback (e.g. server components) — returns English
-    return { locale: "en" as Locale, setLocale: () => {}, t: (k: TKey) => en[k] ?? k };
+    return {
+      locale: "en" as Locale,
+      setLocale: () => {},
+      t: ((k: string) => (en as Record<string, string>)[k] ?? k) as I18nT,
+    };
   }
   return ctx;
 }

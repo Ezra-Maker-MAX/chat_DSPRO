@@ -59,9 +59,9 @@ export default async function TenantLayout({
       avatarSeed={me?.avatarSeed || ""}
       userRole={payload.role}
       adultEnabled={adultEnabled}
-      allowMedia={tenant.allowMedia}
-      allowVoice={tenant.allowVoice}
-      allowVideo={tenant.allowVideo}
+      allowMedia={tenant.allowMedia ?? false}
+      allowVoice={tenant.allowVoice ?? false}
+      allowVideo={tenant.allowVideo ?? false}
     >
       {children}
     </TenantLayoutClient>

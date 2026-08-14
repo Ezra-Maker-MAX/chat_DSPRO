@@ -6,7 +6,7 @@ import { useI18n } from "@/lib/i18n";
 interface Media {
   id: string;
   storageUrl: string;
-  mediaType: "image" | "audio" | "video";
+  mediaType: string; // "image" | "audio" | "video"
   fileName: string;
   mimeType: string;
 }

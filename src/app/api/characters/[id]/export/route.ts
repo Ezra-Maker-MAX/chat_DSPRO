@@ -63,7 +63,7 @@ export async function GET(_req: NextRequest, { params }: Params) {
   }
 
   const safeName = (card.name || "character").replace(/[^\w\u4e00-\u9fa5-]+/g, "_");
-  return new NextResponse(png, {
+  return new NextResponse(new Uint8Array(png), {
     status: 200,
     headers: {
       "Content-Type": "image/png",

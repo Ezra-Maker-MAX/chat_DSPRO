@@ -269,7 +269,7 @@ export const worldBookEntries = sqliteTable("world_book_entries", {
   worldBookId: text("world_book_id").notNull().references(() => worldBooks.id),
   keys: text("keys").default("[]"), // JSON array of primary trigger keywords
   secondaryKeys: text("secondary_keys").default("[]"), // JSON array — AND / NOT logic
-  selectiveLogic: text("selective_logic").default(null), // "AND" | "NOT" | null (= OR)
+  selectiveLogic: text("selective_logic"), // "AND" | "NOT" | null (= OR)
   content: text("content").notNull(),
   constant: integer("constant", { mode: "boolean" }).default(false), // always inject (蓝灯)
   caseSensitive: integer("case_sensitive", { mode: "boolean" }).default(false),

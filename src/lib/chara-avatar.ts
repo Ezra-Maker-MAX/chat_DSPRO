@@ -48,7 +48,6 @@ export async function buildAndUploadAvatar(
   const blob = await put(path, png, {
     access: "public",
     contentType: "image/png",
-    allowOverwrite: true,
   });
   return blob.url;
 }

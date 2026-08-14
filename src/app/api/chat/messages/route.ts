@@ -109,7 +109,6 @@ export async function GET(req: NextRequest) {
 
   const { searchParams } = new URL(req.url);
   const channelId = searchParams.get("channelId");
-  const before = searchParams.get("before"); // cursor-based pagination
   const since = searchParams.get("since"); // message id — return only NEWER messages
   const limit = Math.min(parseInt(searchParams.get("limit") || "50"), 100);
 
@@ -133,44 +132,26 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: "Channel not found" }, { status: 404 });
   }
 
-  // Build query
-  let query = db
-    .select({
-      id: schema.messages.id,
-      content: schema.messages.content,
-      type: schema.messages.type,
-      replyToId: schema.messages.replyToId,
-      targetUserId: schema.messages.targetUserId,
-      createdAt: schema.messages.createdAt,
-      userId: schema.messages.userId,
-      nickname: schema.users.nickname,
-      avatarSeed: schema.users.avatarSeed,
-    })
-    .from(schema.messages)
-    .leftJoin(schema.users, eq(schema.messages.userId, schema.users.id))
-    .where(
-      and(
-        eq(schema.messages.tenantId, session.tenantId),
-        eq(schema.messages.channelId, channelId)
-      )
-    )
-    .orderBy(desc(schema.messages.createdAt))
-    .limit(limit);
-
-  if (before) {
-    query = query.where(
-      and(
-        eq(schema.messages.tenantId, session.tenantId),
-        eq(schema.messages.channelId, channelId)
-      )
-    );
-  }
+  // Row shape returned by both query branches below.
+  type MessageRow = {
+    id: string;
+    content: string | null;
+    type: string | null;
+    replyToId: string | null;
+    targetUserId: string | null;
+    createdAt: string | null;
+    userId: string | null;
+    nickname: string | null;
+    avatarSeed: string | null;
+  };
 
   // `since=<id>` — fetch only messages newer than the given one. Works
   // cross-process on serverless: the poll client passes its latest known
   // message id and gets back any messages written since (e.g. by a bot
   // handler that landed on a different serverless instance than the SSE
   // subscriber, since in-memory SSE pub-sub doesn't scale beyond one process).
+
+  let messages: MessageRow[];
   if (since) {
     const [anchor] = await db
       .select({ createdAt: schema.messages.createdAt })
@@ -182,37 +163,62 @@ export async function GET(req: NextRequest) {
         )
       )
       .limit(1);
-    if (anchor) {
-      query = db
-        .select({
-          id: schema.messages.id,
-          content: schema.messages.content,
-          type: schema.messages.type,
-          replyToId: schema.messages.replyToId,
-          targetUserId: schema.messages.targetUserId,
-          createdAt: schema.messages.createdAt,
-          userId: schema.messages.userId,
-          nickname: schema.users.nickname,
-          avatarSeed: schema.users.avatarSeed,
-        })
-        .from(schema.messages)
-        .leftJoin(schema.users, eq(schema.messages.userId, schema.users.id))
-        .where(
-          and(
-            eq(schema.messages.tenantId, session.tenantId),
-            eq(schema.messages.channelId, channelId),
-            gt(schema.messages.createdAt, anchor.createdAt)
-          )
-        )
-        .orderBy(asc(schema.messages.createdAt)) // ascending for `since` polling
-        .limit(limit);
-    } else {
+    if (!anchor) {
       // Anchor not found (e.g. very old id) — return empty to avoid a flood
       return NextResponse.json({ messages: [], hasMore: false });
     }
+    if (!anchor.createdAt) {
+      // Anchor has no timestamp — cannot order by it; bail to empty.
+      return NextResponse.json({ messages: [], hasMore: false });
+    }
+    const anchorCreatedAt = anchor.createdAt;
+    messages = await db
+      .select({
+        id: schema.messages.id,
+        content: schema.messages.content,
+        type: schema.messages.type,
+        replyToId: schema.messages.replyToId,
+        targetUserId: schema.messages.targetUserId,
+        createdAt: schema.messages.createdAt,
+        userId: schema.messages.userId,
+        nickname: schema.users.nickname,
+        avatarSeed: schema.users.avatarSeed,
+      })
+      .from(schema.messages)
+      .leftJoin(schema.users, eq(schema.messages.userId, schema.users.id))
+      .where(
+        and(
+          eq(schema.messages.tenantId, session.tenantId),
+          eq(schema.messages.channelId, channelId),
+          gt(schema.messages.createdAt, anchorCreatedAt)
+        )
+      )
+      .orderBy(asc(schema.messages.createdAt)) // ascending for `since` polling
+      .limit(limit);
+  } else {
+    messages = await db
+      .select({
+        id: schema.messages.id,
+        content: schema.messages.content,
+        type: schema.messages.type,
+        replyToId: schema.messages.replyToId,
+        targetUserId: schema.messages.targetUserId,
+        createdAt: schema.messages.createdAt,
+        userId: schema.messages.userId,
+        nickname: schema.users.nickname,
+        avatarSeed: schema.users.avatarSeed,
+      })
+      .from(schema.messages)
+      .leftJoin(schema.users, eq(schema.messages.userId, schema.users.id))
+      .where(
+        and(
+          eq(schema.messages.tenantId, session.tenantId),
+          eq(schema.messages.channelId, channelId)
+        )
+      )
+      .orderBy(desc(schema.messages.createdAt))
+      .limit(limit);
   }
-
-  const messages = await query;
 
   // Get media for ALL these messages in one IN(...) query — previously this
   // was filtering on `messageId = messageIds[0]` only, so every message except
@@ -364,7 +370,7 @@ export async function POST(req: NextRequest) {
         .from(schema.messages)
         .where(eq(schema.messages.id, replyToId))
         .limit(1);
-      if (parent?.type === "text") snippet = parent.content;
+      if (parent?.type === "text") snippet = parent.content ?? undefined;
     }
     void replyWithBot({
       tenantId: session.tenantId,

@@ -109,7 +109,7 @@ export async function resolveInvite(
     if (inviteRow.expiresAt && new Date(inviteRow.expiresAt).getTime() < Date.now()) {
       return { error: "This invite code has expired" };
     }
-    if (inviteRow.maxUses !== null && inviteRow.usedCount >= inviteRow.maxUses) {
+    if (inviteRow.maxUses !== null && (inviteRow.usedCount ?? 0) >= inviteRow.maxUses) {
       return { error: "This invite code has reached its usage limit" };
     }
   }
@@ -122,8 +122,8 @@ export async function resolveInvite(
  */
 export async function consumeInvite(invite: {
   id?: string;
-  singleUse?: boolean;
-  usedCount?: number;
+  singleUse?: boolean | null;
+  usedCount?: number | null;
   maxUses?: number | null;
 }): Promise<void> {
   if (!invite.id) return;

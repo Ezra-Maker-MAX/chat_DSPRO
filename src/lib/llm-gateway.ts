@@ -39,7 +39,7 @@ export async function getModelForTenant(
     for (const route of routes) {
       if (route.condition !== "*") {
         try {
-          const regex = new RegExp(route.condition, "i");
+          const regex = new RegExp(route.condition || "", "i");
           if (regex.test(prompt)) {
             matchedRoute = route;
             break;

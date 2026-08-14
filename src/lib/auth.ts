@@ -76,7 +76,7 @@ export async function joinTenant(
     .from(schema.users)
     .where(eq(schema.users.tenantId, tenant.id));
 
-  if (members.length >= tenant.maxMembers) {
+  if (members.length >= (tenant.maxMembers ?? 100)) {
     return { error: "This space is full" };
   }
 

@@ -68,7 +68,9 @@ export async function POST(req: NextRequest) {
       provider,
       apiKey,
       body: buildPingBody(provider, model),
-      timeoutMs: 30_000,
+      // 60s — some gateways (AMD Radeon Cloud, first cold start) can take
+      // 30-45s before the first token; a shorter window causes false alarms.
+      timeoutMs: 60_000,
     });
 
     const latencyMs = Date.now() - start;

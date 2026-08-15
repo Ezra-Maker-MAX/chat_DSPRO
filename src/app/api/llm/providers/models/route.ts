@@ -69,11 +69,10 @@ export async function POST(req: NextRequest) {
     }, 12_000);
 
     if (!resp.ok) {
-      const text = await resp.text().catch(() => "");
       return NextResponse.json({
         models: defaultModelsForProvider(provider),
         source: "fallback",
-        warning: `Endpoint returned ${resp.status}: ${text.slice(0, 120)}`,
+        warning: friendlyFetchWarning(provider, base, `Endpoint returned ${resp.status}`),
       });
     }
 
@@ -86,7 +85,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({
         models: defaultModelsForProvider(provider),
         source: "fallback",
-        warning: "Provider returned no models",
+        warning: friendlyFetchWarning(provider, base, "Provider returned no models"),
       });
     }
 
@@ -98,9 +97,24 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({
       models: defaultModelsForProvider(provider),
       source: "fallback",
-      warning: msg,
+      warning: friendlyFetchWarning(provider, base, msg),
     });
   }
+}
+
+/** Build a clear, actionable warning that hints at the most common fix
+ *  (missing /v1 path) and reminds Custom providers that hand-keyed model
+ *  IDs are the expected path. */
+function friendlyFetchWarning(
+  provider: string,
+  baseUrl: string | undefined,
+  detail: string
+): string {
+  const path = `${(baseUrl || "https://api.openai.com/v1").replace(/\/$/, "")}/models`;
+  if (provider === "custom") {
+    return `Couldn't reach ${path} — ${detail}. Private endpoints often don't expose /models — just type the model ID manually below.`;
+  }
+  return `Couldn't reach ${path} — ${detail}. Check the base URL (most providers need a /v1 suffix) and API key.`;
 }
 
 function defaultModelsForProvider(provider: string): string[] {

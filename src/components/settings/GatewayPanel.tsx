@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useI18n } from "@/lib/i18n";
-import { Loader2, CheckCircle2, XCircle, RefreshCw, Zap } from "lucide-react";
+import { Loader2, CheckCircle2, XCircle, RefreshCw, Zap, Info } from "lucide-react";
 
 /**
  * A self-contained "refresh models + test connection" control row.
@@ -179,6 +179,15 @@ export default function GatewayPanel({
               {t(`gateway.source.${modelsSource}`)}
               {modelsWarning ? ` · ${modelsWarning}` : ""}
             </p>
+          )}
+          {/* When the live fetch failed AND there's no curated fallback to fill
+              the dropdown, show an explicit hint — most Custom endpoints don't
+              expose /models so hand-keying the ID is the expected workflow. */}
+          {modelsSource === "fallback" && models.length === 0 && (
+            <div className="mt-1.5 flex items-start gap-1.5 rounded-md border border-[var(--color-warning)]/30 bg-[var(--color-warning)]/10 px-2 py-1.5 text-[10px] leading-relaxed text-[var(--color-text-secondary)]">
+              <Info size={11} className="shrink-0 mt-0.5 text-[var(--color-warning)]" />
+              <span>{t("gateway.refresh.noFallback")}</span>
+            </div>
           )}
         </div>
       </div>

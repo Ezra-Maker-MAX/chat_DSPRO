@@ -101,16 +101,25 @@ export async function POST(req: NextRequest) {
     );
   } catch (e) {
     const latencyMs = Date.now() - start;
-    const msg = e instanceof Error ? e.message : "Network error";
-    const displayMsg =
-      msg === "The operation was aborted" || msg === "This operation was aborted"
-        ? `Request timed out after ${latencyMs}ms. The gateway may be slow or unreachable — check your base URL and try again.`
-        : msg;
+    const raw = e instanceof Error ? e.message : "Network error";
     return NextResponse.json(
-      { ok: false, error: displayMsg, latencyMs },
+      { ok: false, error: friendlyNetworkError(raw, url), latencyMs, endpoint: url },
       { status: 200 }
     );
   }
+}
+
+/** The native fetch error is just "fetch failed" / "aborted" — translate it
+ *  into something a human can act on, and point at the actual endpoint. */
+function friendlyNetworkError(raw: string, endpoint: string): string {
+  const low = raw.toLowerCase();
+  if (low.includes("aborted")) {
+    return `Request timed out or was aborted reaching ${endpoint}. The gateway may be slow or blocking this server's region.`;
+  }
+  if (low.includes("fetch failed") || low.includes("network")) {
+    return `Cannot reach ${endpoint}. Usually DNS / TLS / firewall. If the model-list call above returns 401, the gateway IS reachable — your API key is the problem.`;
+  }
+  return `${raw} (${endpoint})`;
 }
 
 type StreamResult =

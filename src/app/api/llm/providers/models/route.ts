@@ -28,6 +28,7 @@ export async function POST(req: NextRequest) {
     apiKey?: string;
     baseUrl?: string;
   };
+  apiKey = apiKey?.trim();
 
   if (body.id && typeof body.id === "string") {
     const [row] = await db
@@ -42,7 +43,7 @@ export async function POST(req: NextRequest) {
       .limit(1);
     if (!row) return NextResponse.json({ error: "Provider not found" }, { status: 404 });
     provider = row.provider;
-    apiKey = row.apiKey;
+    apiKey = row.apiKey?.trim();
     baseUrl = row.baseUrl || undefined;
   }
 

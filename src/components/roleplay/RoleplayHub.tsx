@@ -131,7 +131,7 @@ export default function RoleplayHub({
   sortBy?: "newest" | "name";
   tagFilter?: string | null;
 }) {
-  const { t } = useI18n();
+  const { t, locale } = useI18n();
   // Loose i18n lookup for dynamic keys (bond stages, vibe tags).
   const tr = (key: string) => (t as unknown as (k: string) => string)(key);
   const [cards, setCards] = useState<CharacterCard[]>([]);
@@ -139,6 +139,52 @@ export default function RoleplayHub({
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [currentRole, setCurrentRole] = useState<"admin" | "member">("member");
+
+  // AI-assisted card creation
+  const [aiOpen, setAiOpen] = useState(false);
+  const [aiPrompt, setAiPrompt] = useState("");
+  const [aiBusy, setAiBusy] = useState(false);
+  const [aiError, setAiError] = useState("");
+
+  const generateCard = async () => {
+    if (!aiPrompt.trim() || aiBusy) return;
+    setAiBusy(true);
+    setAiError("");
+    try {
+      const res = await fetch("/api/characters/generate", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ prompt: aiPrompt.trim(), adult: !!form.adult, locale }),
+      });
+      const data = await res.json();
+      if (!res.ok || !data.card) {
+        if (data.code === "insufficient_credit" || String(data.error).includes("INSUFFICIENT_CREDIT")) {
+          setRechargeOpen(true);
+        }
+        setAiError(data.error || t("aigen.error"));
+        return;
+      }
+      const c = data.card;
+      setForm((f) => ({
+        ...f,
+        name: c.name || f.name,
+        description: c.description || f.description,
+        personality: c.personality || f.personality,
+        scenario: c.scenario || f.scenario,
+        firstMes: c.firstMes || f.firstMes,
+        mesExample: c.mesExample || f.mesExample,
+        systemPrompt: c.systemPrompt || f.systemPrompt,
+        tags: Array.isArray(c.tags) ? c.tags : f.tags,
+      }));
+      setAiPrompt("");
+      setAiOpen(false);
+    } catch {
+      setAiError(t("aigen.error"));
+    } finally {
+      setAiBusy(false);
+    }
+  };
+
 
   // Bond (affection) — relationship stage shown in the chat header.
   const [affection, setAffection] = useState(0);
@@ -870,7 +916,18 @@ export default function RoleplayHub({
         {/* Editor */}
         {editing && (
           <div className="glass-card p-5 mb-6 animate-fade-in">
-            <h3 className="font-medium text-sm mb-4">{editingId ? t("rp.edit.title") : t("rp.create.title")}</h3>
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="font-medium text-sm">{editingId ? t("rp.edit.title") : t("rp.create.title")}</h3>
+              <button
+                type="button"
+                onClick={() => { setAiOpen(true); setAiError(""); }}
+                className="inline-flex items-center gap-1 rounded-lg border border-[var(--color-accent)]/30 bg-[var(--color-accent-muted)] px-2.5 py-1 text-[11px] font-medium text-[var(--color-accent-glow)] hover:bg-[var(--color-accent)] hover:text-white transition-colors"
+                title={t("aigen.title")}
+              >
+                <Sparkles size={12} />
+                {t("aigen.title")}
+              </button>
+            </div>
             <div className="space-y-3">
               <div>
                 <label className="block text-xs text-[var(--color-text-muted)] mb-1">{t("rp.name")}</label>
@@ -1348,6 +1405,64 @@ export default function RoleplayHub({
       </div>
     </div>
     {rechargeOpen && <RechargeModal onClose={() => setRechargeOpen(false)} />}
+
+    {/* AI card generator modal */}
+    {aiOpen && (
+      <div className="fixed inset-0 z-[70] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
+        <div className="w-full max-w-md rounded-2xl border border-[var(--color-border)] bg-[var(--color-bg-card)] shadow-[0_24px_70px_rgba(0,0,0,0.55)]">
+          <div className="flex items-center gap-2.5 px-5 py-4 border-b border-[var(--color-border)]">
+            <Sparkles size={16} className="text-[var(--color-accent)]" />
+            <h3 className="flex-1 font-[family-name:var(--font-display)] text-sm font-bold text-[var(--color-text-primary)]">
+              {t("aigen.title")}
+            </h3>
+            <button
+              onClick={() => setAiOpen(false)}
+              className="p-1.5 rounded-lg text-[var(--color-text-muted)] hover:bg-[var(--color-bg-hover)] hover:text-[var(--color-text-primary)] transition-colors"
+            >
+              <X size={16} />
+            </button>
+          </div>
+          <div className="p-5 space-y-3">
+            <p className="text-xs text-[var(--color-text-muted)] leading-relaxed">
+              {t("aigen.cardHint")}
+            </p>
+            <textarea
+              value={aiPrompt}
+              onChange={(e) => setAiPrompt(e.target.value)}
+              placeholder={t("aigen.cardPh")}
+              rows={4}
+              className="w-full rounded-xl border border-[var(--color-border)] bg-[var(--color-bg-input)] px-3 py-2.5 text-sm text-[var(--color-text-primary)] placeholder:text-[var(--color-text-muted)] resize-none focus:border-[var(--color-accent)] outline-none transition-colors"
+            />
+            {form.adult && (
+              <p className="text-[11px] text-[var(--color-danger)]">
+                {t("aigen.adultNote")}
+              </p>
+            )}
+            {aiError && (
+              <div className="rounded-lg border border-[var(--color-danger)]/25 bg-[var(--color-danger)]/10 px-3 py-2 text-xs text-[var(--color-danger)]">
+                {aiError}
+              </div>
+            )}
+            <div className="flex items-center justify-end gap-2 pt-1">
+              <button
+                onClick={() => setAiOpen(false)}
+                className="rounded-lg px-4 py-2 text-xs text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)] transition-colors"
+              >
+                {t("aigen.cancel")}
+              </button>
+              <button
+                onClick={generateCard}
+                disabled={aiBusy || !aiPrompt.trim()}
+                className="inline-flex items-center gap-1.5 rounded-xl bg-[var(--color-accent)] px-4 py-2 text-xs font-medium text-white hover:bg-[var(--color-accent-glow)] disabled:opacity-50 transition-colors"
+              >
+                {aiBusy ? <Loader2 size={13} className="animate-spin" /> : <Sparkles size={13} />}
+                {aiBusy ? t("aigen.generating") : t("aigen.generate")}
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    )}
     </>
   );
 }

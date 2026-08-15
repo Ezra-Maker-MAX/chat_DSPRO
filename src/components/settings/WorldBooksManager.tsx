@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { useI18n } from "@/lib/i18n";
 import {
-  BookOpen, Plus, Trash2, Loader2, KeyRound, X, Save,
+  BookOpen, Plus, Trash2, Loader2, KeyRound, X, Save, Sparkles,
   Edit3, ToggleLeft, ToggleRight, Zap, Eye, EyeOff,
   ChevronDown, ChevronUp, Copy, Check,
 } from "lucide-react";
@@ -43,10 +43,20 @@ const EMPTY_ENTRY = {
 };
 
 export default function WorldBooksManager() {
-  const { t } = useI18n();
+  const { t, locale } = useI18n();
   const [books, setBooks] = useState<WorldBook[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+
+  // AI-assisted world book creation
+  const [aiOpen, setAiOpen] = useState(false);
+  const [aiPrompt, setAiPrompt] = useState("");
+  const [aiBusy, setAiBusy] = useState(false);
+  const [aiError, setAiError] = useState("");
+  const [aiResult, setAiResult] = useState<{
+    book: { name: string; description: string };
+    entries: { keys: string[]; secondaryKeys?: string[]; content: string }[];
+  } | null>(null);
 
   const [activeBookId, setActiveBookId] = useState<string | null>(null);
   const [entries, setEntries] = useState<Entry[]>([]);
@@ -133,6 +143,70 @@ export default function WorldBooksManager() {
       await fetchBooks();
     } catch {
       setError(t("wb.error.delete"));
+    }
+  };
+
+  const generateBook = async () => {
+    if (!aiPrompt.trim() || aiBusy) return;
+    setAiBusy(true);
+    setAiError("");
+    setAiResult(null);
+    try {
+      const res = await fetch("/api/worldbooks/generate", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ prompt: aiPrompt.trim(), locale }),
+      });
+      const data = await res.json();
+      if (!res.ok || !data.book) {
+        setAiError(data.error || t("aigen.error"));
+        return;
+      }
+      setAiResult({ book: data.book, entries: Array.isArray(data.entries) ? data.entries : [] });
+    } catch {
+      setAiError(t("aigen.error"));
+    } finally {
+      setAiBusy(false);
+    }
+  };
+
+  const commitAiBook = async () => {
+    if (!aiResult || aiBusy) return;
+    setAiBusy(true);
+    setAiError("");
+    try {
+      // 1) Create the book container
+      const res = await fetch("/api/worldbooks", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          name: aiResult.book.name,
+          description: aiResult.book.description,
+        }),
+      });
+      const data = await res.json();
+      const bookId = data.success ? data.id : null;
+      if (!bookId) {
+        setAiError(t("wb.error.create"));
+        return;
+      }
+      // 2) Create each generated entry
+      for (const e of aiResult.entries) {
+        await fetch(`/api/worldbooks/${bookId}`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ ...e }),
+        }).catch(() => {});
+      }
+      setAiOpen(false);
+      setAiResult(null);
+      setAiPrompt("");
+      await fetchBooks();
+      await openBook(bookId);
+    } catch {
+      setAiError(t("wb.error.create"));
+    } finally {
+      setAiBusy(false);
     }
   };
 
@@ -272,9 +346,19 @@ export default function WorldBooksManager() {
 
       {/* ═══════ Create World Book ═══════ */}
       <div className="glass-card p-4 space-y-3">
-        <div className="flex items-center gap-2">
-          <BookOpen size={16} className="text-[var(--color-accent-glow)]" />
-          <h3 className="font-semibold text-sm">{t("wb.create")}</h3>
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <BookOpen size={16} className="text-[var(--color-accent-glow)]" />
+            <h3 className="font-semibold text-sm">{t("wb.create")}</h3>
+          </div>
+          <button
+            onClick={() => { setAiOpen(true); setAiError(""); setAiResult(null); }}
+            className="inline-flex items-center gap-1 rounded-lg border border-[var(--color-accent)]/30 bg-[var(--color-accent-muted)] px-2.5 py-1 text-[11px] font-medium text-[var(--color-accent-glow)] hover:bg-[var(--color-accent)] hover:text-white transition-colors"
+            title={t("aigen.title")}
+          >
+            <Sparkles size={12} />
+            {t("aigen.title")}
+          </button>
         </div>
         <div className="flex flex-col sm:flex-row gap-2">
           <input
@@ -706,6 +790,97 @@ export default function WorldBooksManager() {
               </div>
             );
           })}
+        </div>
+      )}
+
+      {/* ═══════ AI World Book Generator ═══════ */}
+      {aiOpen && (
+        <div className="fixed inset-0 z-[70] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
+          <div className="w-full max-w-lg max-h-[86vh] overflow-y-auto rounded-2xl border border-[var(--color-border)] bg-[var(--color-bg-card)] shadow-[0_24px_70px_rgba(0,0,0,0.55)]">
+            <div className="flex items-center gap-2.5 px-5 py-4 border-b border-[var(--color-border)]">
+              <Sparkles size={16} className="text-[var(--color-accent)]" />
+              <h3 className="flex-1 font-[family-name:var(--font-display)] text-sm font-bold text-[var(--color-text-primary)]">
+                {t("aigen.title")}
+              </h3>
+              <button
+                onClick={() => setAiOpen(false)}
+                className="p-1.5 rounded-lg text-[var(--color-text-muted)] hover:bg-[var(--color-bg-hover)] hover:text-[var(--color-text-primary)] transition-colors"
+              >
+                <X size={16} />
+              </button>
+            </div>
+
+            <div className="p-5 space-y-3">
+              <p className="text-xs text-[var(--color-text-muted)] leading-relaxed">
+                {t("aigen.bookHint")}
+              </p>
+              <textarea
+                value={aiPrompt}
+                onChange={(e) => setAiPrompt(e.target.value)}
+                placeholder={t("aigen.bookPh")}
+                rows={3}
+                className="w-full rounded-xl border border-[var(--color-border)] bg-[var(--color-bg-input)] px-3 py-2.5 text-sm text-[var(--color-text-primary)] placeholder:text-[var(--color-text-muted)] resize-none focus:border-[var(--color-accent)] outline-none transition-colors"
+              />
+              {aiError && (
+                <div className="rounded-lg border border-[var(--color-danger)]/25 bg-[var(--color-danger)]/10 px-3 py-2 text-xs text-[var(--color-danger)]">
+                  {aiError}
+                </div>
+              )}
+
+              {aiResult ? (
+                <div className="space-y-2">
+                  <div className="rounded-xl border border-[var(--color-border)] bg-[var(--color-bg-input)] px-3 py-2.5">
+                    <div className="text-sm font-semibold text-[var(--color-text-primary)]">{aiResult.book.name}</div>
+                    <div className="text-[11px] text-[var(--color-text-muted)] mt-0.5">{aiResult.book.description}</div>
+                  </div>
+                  <div className="max-h-56 space-y-1.5 overflow-y-auto pr-1">
+                    {aiResult.entries.map((e, i) => (
+                      <div key={i} className="rounded-lg border border-[var(--color-border)] bg-[var(--color-bg-input)] px-3 py-2">
+                        <div className="flex flex-wrap gap-1">
+                          {e.keys.slice(0, 4).map((k) => (
+                            <span key={k} className="rounded bg-[var(--color-accent-muted)] px-1.5 py-0.5 text-[10px] text-[var(--color-accent-glow)]">
+                              {k}
+                            </span>
+                          ))}
+                        </div>
+                        <p className="mt-1 text-[11px] leading-relaxed text-[var(--color-text-secondary)] line-clamp-3">
+                          {e.content}
+                        </p>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              ) : null}
+
+              <div className="flex items-center justify-end gap-2 pt-1">
+                <button
+                  onClick={() => setAiOpen(false)}
+                  className="rounded-lg px-4 py-2 text-xs text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)] transition-colors"
+                >
+                  {t("aigen.cancel")}
+                </button>
+                {aiResult ? (
+                  <button
+                    onClick={commitAiBook}
+                    disabled={aiBusy}
+                    className="inline-flex items-center gap-1.5 rounded-xl bg-[var(--color-accent)] px-4 py-2 text-xs font-medium text-white hover:bg-[var(--color-accent-glow)] disabled:opacity-50 transition-colors"
+                  >
+                    {aiBusy ? <Loader2 size={13} className="animate-spin" /> : <Plus size={13} />}
+                    {aiBusy ? t("aigen.creating") : t("aigen.createBook")}
+                  </button>
+                ) : (
+                  <button
+                    onClick={generateBook}
+                    disabled={aiBusy || !aiPrompt.trim()}
+                    className="inline-flex items-center gap-1.5 rounded-xl bg-[var(--color-accent)] px-4 py-2 text-xs font-medium text-white hover:bg-[var(--color-accent-glow)] disabled:opacity-50 transition-colors"
+                  >
+                    {aiBusy ? <Loader2 size={13} className="animate-spin" /> : <Sparkles size={13} />}
+                    {aiBusy ? t("aigen.generating") : t("aigen.generate")}
+                  </button>
+                )}
+              </div>
+            </div>
+          </div>
         </div>
       )}
     </div>

@@ -80,8 +80,11 @@ export async function chargeTokens(
   provider: string,
   model: string,
   inputTokens: number,
-  outputTokens: number
+  outputTokens: number,
+  opts?: { adminFree?: boolean }
 ) {
+  // Admins are never charged — their usage comes with the space.
+  if (opts?.adminFree) return 0;
   const rule = await getPricing(tenantId, provider, model);
   const costCents =
     Math.ceil(((inputTokens || 0) / 1_000_000) * rule.inputCentsPer1m) +

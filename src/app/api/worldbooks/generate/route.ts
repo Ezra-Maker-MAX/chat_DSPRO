@@ -56,6 +56,7 @@ export async function POST(req: NextRequest) {
       system,
       user: prompt,
       maxTokens: 1800,
+      adminFree: session.role === "admin",
     });
     const data = extractJson<{ name?: unknown; description?: unknown; entries?: unknown }>(text);
     if (!data || typeof data.name !== "string" || !data.name.trim() || !Array.isArray(data.entries)) {

@@ -52,6 +52,7 @@ export async function POST(req: NextRequest) {
       system,
       user: prompt,
       maxTokens: 1400,
+      adminFree: session.role === "admin",
     });
     const card = extractJson<Record<string, unknown>>(text);
     if (!card || typeof card.name !== "string" || !card.name.trim()) {

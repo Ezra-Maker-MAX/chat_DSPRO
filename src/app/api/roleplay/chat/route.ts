@@ -96,6 +96,7 @@ export async function POST(req: NextRequest) {
       authorNote: author.note,
       authorNoteDepth: author.depth,
       bondStage: newBond.index,
+      adminFree: session.role === "admin",
     });
 
     await appendSessionMessages(rpSession.id, [

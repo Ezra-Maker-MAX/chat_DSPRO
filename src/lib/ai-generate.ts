@@ -19,11 +19,13 @@ export async function aiGenerateText(
     user: string;
     maxTokens?: number;
     temperature?: number;
+    /** Admins bypass the credit gate and aren't charged. */
+    adminFree?: boolean;
   }
 ): Promise<string> {
-  const { system, user, maxTokens = 1400, temperature = 0.9 } = opts;
+  const { system, user, maxTokens = 1400, temperature = 0.9, adminFree } = opts;
 
-  const balance = await ensureTenantBalance(tenantId);
+  const balance = await ensureTenantBalance(tenantId, { adminFree });
   if ((balance.balanceCents ?? 0) <= 0) {
     throw new Error("INSUFFICIENT_CREDIT");
   }
@@ -42,7 +44,7 @@ export async function aiGenerateText(
 
   if (usage) {
     const total = (usage as { totalTokens?: number }).totalTokens ?? 0;
-    await chargeTokens(tenantId, routed.provider.provider, routed.provider.modelId, total, 0);
+    await chargeTokens(tenantId, routed.provider.provider, routed.provider.modelId, total, 0, { adminFree });
   }
   return text;
 }

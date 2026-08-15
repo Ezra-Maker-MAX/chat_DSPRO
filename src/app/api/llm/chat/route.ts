@@ -19,8 +19,9 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "messages array required" }, { status: 400 });
     }
 
-    // Credit gate — block when prepaid balance is exhausted.
-    const bal = await ensureTenantBalance(session.tenantId);
+    // Credit gate — block when prepaid balance is exhausted (admins bypass).
+    const adminFree = session.role === "admin";
+    const bal = await ensureTenantBalance(session.tenantId, { adminFree });
     if ((bal.balanceCents ?? 0) <= 0) {
       return NextResponse.json({
         error: "INSUFFICIENT_CREDIT",
@@ -59,7 +60,8 @@ export async function POST(req: NextRequest) {
             routed.provider.provider as string,
             routed.provider.modelId,
             Math.ceil(total / 2),
-            Math.ceil(total / 2)
+            Math.ceil(total / 2),
+            { adminFree }
           ).catch(() => {});
         }
       },

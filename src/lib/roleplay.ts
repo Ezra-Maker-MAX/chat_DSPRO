@@ -619,11 +619,13 @@ export async function generateCharacterReply(params: {
   authorNoteDepth?: number;
   /** 0..4 — bond/affection stage; injects the staged relationship directive. */
   bondStage?: number;
+  /** Admins bypass the credit gate and aren't charged. */
+  adminFree?: boolean;
 }): Promise<string> {
   const { tenantId, card, worldBook, history, userTurn } = params;
 
   // Credit gate — block LLM calls once prepaid balance is exhausted.
-  const balance = await ensureTenantBalance(tenantId);
+  const balance = await ensureTenantBalance(tenantId, { adminFree: params.adminFree });
   if ((balance.balanceCents ?? 0) <= 0) {
     throw new InsufficientCreditError();
   }
@@ -745,7 +747,8 @@ export async function generateCharacterReply(params: {
       routed.provider.provider as string,
       routed.provider.modelId,
       Math.ceil(total / 2),
-      Math.ceil(total / 2)
+      Math.ceil(total / 2),
+      { adminFree: params.adminFree }
     );
   }
 

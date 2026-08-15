@@ -33,6 +33,8 @@ async function replyWithBot(params: {
   text: string;
   /** Optional snippet from the message that was replied to (for context). */
   repliedToSnippet?: string;
+  /** Admins bypass the credit gate and aren't charged. */
+  adminFree?: boolean;
 }) {
   try {
     const bot = await ensureBotUser(params.tenantId);
@@ -47,7 +49,7 @@ async function replyWithBot(params: {
       return;
     }
     // Credit gate — skip generation (post a friendly notice) when out of credit.
-    const bal = await ensureTenantBalance(params.tenantId);
+    const bal = await ensureTenantBalance(params.tenantId, { adminFree: params.adminFree });
     if ((bal.balanceCents ?? 0) <= 0) {
       await postBotTextMessage({
         tenantId: params.tenantId,
@@ -86,7 +88,8 @@ async function replyWithBot(params: {
         routed.provider.provider as string,
         routed.provider.modelId,
         Math.ceil(total / 2),
-        Math.ceil(total / 2)
+        Math.ceil(total / 2),
+        { adminFree: params.adminFree }
       ).catch(() => {});
     }
     await postBotTextMessage({
@@ -379,6 +382,7 @@ export async function POST(req: NextRequest) {
       nickname: session.nickname,
       text: sanitizedContent || "(empty)",
       repliedToSnippet: snippet,
+      adminFree: session.role === "admin",
     });
   }
 

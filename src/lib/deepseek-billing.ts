@@ -53,7 +53,20 @@ export async function findDeepSeekProvider(tenantId: string) {
 }
 
 /** Get (create if needed) the tenant's credit balance row. */
-export async function ensureTenantBalance(tenantId: string) {
+export async function ensureTenantBalance(
+  tenantId: string,
+  opts?: { adminFree?: boolean }
+) {
+  // Admins bypass the credit gate entirely — they operate the space and
+  // shouldn't be blocked by their own prepaid balance.
+  if (opts?.adminFree) {
+    return {
+      id: "admin-bypass",
+      tenantId,
+      balanceCents: 999_999_999,
+      updatedAt: null,
+    } as typeof schema.tenantBalances.$inferSelect;
+  }
   const [existing] = await db
     .select()
     .from(schema.tenantBalances)

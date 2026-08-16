@@ -166,12 +166,20 @@ const RummikubBoard = function ({ G, ctx, moves, playerID, matchData, matchID, e
     />
   );
 
-  // Player status strip
+  // Player status strip (BGA-style seats with timer ring on the active player)
   const players = (matchData || []).map((pd, i) => ({
     name: pd?.name || `Player ${i + 1}`,
     tiles: hands[i]?.flat().filter(Boolean).length || 0,
     active: String(ctx.currentPlayer) === String(i),
   }));
+
+  // Active player's turn progress for the timer ring (0..100).
+  const ringProgress = (() => {
+    if (ctx.gameover || !G.timerExpireAt || !G.timePerTurn) return null;
+    const remain = G.timerExpireAt - getSecTs();
+    const pct = Math.round((remain / G.timePerTurn) * 100);
+    return Math.max(0, Math.min(100, pct));
+  })();
 
   const drawOrEnd = G.tilesPool.length > 0 && !isBoardHasNewTiles(G) ? "draw" : "end";
 
@@ -186,9 +194,15 @@ const RummikubBoard = function ({ G, ctx, moves, playerID, matchData, matchID, e
         <div className="rmk-players">
           {players.map((p, i) => (
             <div key={i} className={"rmk-player" + (p.active ? " rmk-player--active" : "")}>
+              {p.active && ringProgress !== null && (
+                <span
+                  className="rmk-timer-ring"
+                  style={{ "--rmk-progress": ringProgress } as React.CSSProperties}
+                />
+              )}
               <span
                 className="rmk-player-dot"
-                style={{ width: 10, height: 10, borderRadius: "50%", background: stringToColor(p.name), display: "inline-block" }}
+                style={{ background: stringToColor(p.name) }}
               />
               <span className="rmk-player-name">{p.name}</span>
               <span className="rmk-player-count">{p.tiles}</span>

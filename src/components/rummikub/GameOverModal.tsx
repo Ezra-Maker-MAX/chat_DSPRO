@@ -19,17 +19,21 @@ const GameOverModal = function ({ gameover, matchData }: GameOverModalProps) {
   return (
     <div className="rmk-over-backdrop">
       <div className="rmk-over-modal">
-        <h2 className="rmk-over-title">🎉 {winner} 获胜！</h2>
+        <div className="rmk-over-crown">👑</div>
+        <h2 className="rmk-over-title">{winner} 获胜！</h2>
         <p className="rmk-over-points">
           总得分 <strong>{winnerPoints}</strong>
         </p>
         <ul className="rmk-over-list">
-          {sorted.map(([pid, pts]) => (
-            <li key={pid} className="rmk-over-item">
-              <span>{matchData?.[parseInt(pid)]?.name || `玩家 ${pid}`}</span>
-              <strong>{pts} 分</strong>
-            </li>
-          ))}
+          {sorted.map(([pid, pts]) => {
+            const isWinner = pid === gameover.winner;
+            return (
+              <li key={pid} className={"rmk-over-item" + (isWinner ? " rmk-over-item--winner" : "")}>
+                <span>{isWinner ? "🏆 " : ""}{matchData?.[parseInt(pid)]?.name || `玩家 ${pid}`}</span>
+                <strong>{pts} 分</strong>
+              </li>
+            );
+          })}
         </ul>
         <div className="rmk-over-actions">
           <button className="rmk-btn rmk-btn--primary" disabled={leaving} onClick={() => setLeaving(true)}>

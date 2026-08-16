@@ -1,0 +1,17 @@
+{
+  "name": "rummikub-server",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "boardgame.io": "^0.50.2",
+    "immer": "^11.1.17",
+    "lodash": "^4.18.1"
+  },
+  "engines": {
+    "node": ">=22"
+  }
+}

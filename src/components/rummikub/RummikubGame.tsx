@@ -2,15 +2,12 @@
 
 import { useState } from "react";
 import { Client } from "boardgame.io/react";
-import { Local } from "boardgame.io/multiplayer";
+import { Local, SocketIO } from "boardgame.io/multiplayer";
 import { Rummikub } from "@/lib/rummikub/Game";
 import Board from "./Board";
+import OnlineLobby, { getServerUrl } from "./OnlineLobby";
 
-/**
- * Local pass-and-play mode — 2 players on one device.
- * Used to validate rules + UI before wiring the online server.
- * (Switch to SocketIO multiplayer once the Railway server is up.)
- */
+/* ---------- Local pass-and-play ---------- */
 const LocalGame = Client({
   game: Rummikub,
   board: Board,
@@ -23,26 +20,63 @@ const LocalGame = Client({
   matchData?: { id: string; name: string }[];
 }>;
 
-interface RummikubGameProps {
-  numPlayers?: number;
+/* ---------- Online (SocketIO) ---------- */
+const OnlineGame = Client({
+  game: Rummikub,
+  board: Board,
+  multiplayer: SocketIO({ server: getServerUrl() }),
+  numPlayers: 2,
+  debug: false,
+}) as unknown as React.ComponentType<{
+  matchID?: string;
+  playerID?: string;
+  credentials?: string;
+  matchData?: { id: string; name: string }[];
+}>;
+
+type Screen = "menu" | "localLobby" | "localMatch" | "onlineLobby" | "onlineMatch";
+
+interface OnlineCtx {
+  matchID: string;
+  playerID: string;
+  creds: string;
+  players: string[];
 }
 
-export default function RummikubGame({ numPlayers = 2 }: RummikubGameProps) {
-  const [players, setPlayers] = useState<string[]>(Array.from({ length: numPlayers }, (_, i) => `玩家${i + 1}`));
-  const [running, setRunning] = useState(false);
-  const [activePlayer, setActivePlayer] = useState("0");
+export default function RummikubGame() {
+  const [screen, setScreen] = useState<Screen>("menu");
+  const [localPlayers, setLocalPlayers] = useState<string[]>(["玩家1", "玩家2"]);
+  const [activeLocal, setActiveLocal] = useState("0");
+  const [online, setOnline] = useState<OnlineCtx | null>(null);
 
-  // Lobby: name the players, then start.
-  if (!running) {
+  /* -------- Menu -------- */
+  if (screen === "menu") {
     return (
       <div className="rmk-lobby">
         <div className="rmk-lobby-title">🎲 拉密 Rummikub</div>
         <div className="rmk-lobby-sub">
-          经典数字麻将游戏：把手中的牌凑成顺子（同色连续数字）或刻子（同数字不同色），
-          每组至少 3 张。首次出牌总分需 ≥30（破冰）。率先出完手牌者获胜。
+          经典数字麻将桌游：凑成顺子或刻子（≥3 张）出牌，破冰需 ≥30 分，率先出完手牌者获胜。
         </div>
+        <div className="rmk-lobby-modes">
+          <button className="rmk-btn rmk-btn--primary" onClick={() => setScreen("onlineLobby")}>
+            🌐 联机对战
+          </button>
+          <button className="rmk-btn" onClick={() => setScreen("localLobby")}>
+            🖥️ 本地同屏
+          </button>
+        </div>
+        <div className="rmk-lobby-note">联机需要已部署 boardgame.io 服务器（见 rummikub-server/README.md）。</div>
+      </div>
+    );
+  }
+
+  /* -------- Local lobby -------- */
+  if (screen === "localLobby") {
+    return (
+      <div className="rmk-lobby">
+        <div className="rmk-lobby-title">🎲 拉密 · 本地同屏</div>
         <div className="rmk-lobby-form">
-          {players.map((name, i) => (
+          {localPlayers.map((name, i) => (
             <div className="rmk-field" key={i}>
               <label>玩家 {i + 1} 的名字</label>
               <input
@@ -50,48 +84,86 @@ export default function RummikubGame({ numPlayers = 2 }: RummikubGameProps) {
                 value={name}
                 maxLength={16}
                 onChange={(e) => {
-                  const next = [...players];
+                  const next = [...localPlayers];
                   next[i] = e.target.value || `玩家${i + 1}`;
-                  setPlayers(next);
+                  setLocalPlayers(next);
                 }}
               />
             </div>
           ))}
         </div>
-        <button className="rmk-btn rmk-btn--primary" onClick={() => setRunning(true)}>
-          ▶ 开始游戏
-        </button>
+        <div className="rmk-lobby-modes">
+          <button className="rmk-btn rmk-btn--primary" onClick={() => setScreen("localMatch")}>
+            ▶ 开始游戏
+          </button>
+          <button className="rmk-btn" onClick={() => setScreen("menu")}>← 返回</button>
+        </div>
       </div>
     );
   }
 
-  return (
-    <div className="rmk-table">
-      {/* Pass-and-play player switcher */}
-      <div className="rmk-players" style={{ justifyContent: "center" }}>
-        {players.map((name, i) => (
-          <button
-            key={i}
-            className={"rmk-player rmk-player--switch" + (activePlayer === String(i) ? " rmk-player--active" : "")}
-            onClick={() => setActivePlayer(String(i))}
-            style={{ cursor: "pointer", border: "none", fontFamily: "inherit" }}
-          >
-            <span className="rmk-player-name">
-              {activePlayer === String(i) ? "👉 " : ""}
-              {name}
-            </span>
-            <span className="rmk-player-count">P{i + 1}</span>
-          </button>
-        ))}
-        <span className="rmk-pool">同屏轮流操作 — 轮到谁就点谁</span>
-      </div>
+  /* -------- Local match -------- */
+  if (screen === "localMatch") {
+    return (
+      <div className="rmk-table">
+        <div className="rmk-players" style={{ justifyContent: "center" }}>
+          {localPlayers.map((name, i) => (
+            <button
+              key={i}
+              className={"rmk-player rmk-player--switch" + (activeLocal === String(i) ? " rmk-player--active" : "")}
+              onClick={() => setActiveLocal(String(i))}
+              style={{ cursor: "pointer", border: "none", fontFamily: "inherit" }}
+            >
+              <span className="rmk-player-name">{activeLocal === String(i) ? "👉 " : ""}{name}</span>
+              <span className="rmk-player-count">P{i + 1}</span>
+            </button>
+          ))}
+          <button className="rmk-btn" style={{ padding: "5px 10px", fontSize: 12 }} onClick={() => setScreen("menu")}>退出</button>
+        </div>
 
-      <LocalGame
-        key={`${players.join("|")}-${activePlayer}`}
-        matchID="local-demo"
-        playerID={activePlayer}
-        matchData={players.map((name, i) => ({ id: String(i), name }))}
+        <LocalGame
+          key={`${localPlayers.join("|")}-${activeLocal}`}
+          matchID="local-demo"
+          playerID={activeLocal}
+          matchData={localPlayers.map((name, i) => ({ id: String(i), name }))}
+        />
+      </div>
+    );
+  }
+
+  /* -------- Online lobby -------- */
+  if (screen === "onlineLobby") {
+    return (
+      <OnlineLobby
+        defaultName={localPlayers[0] !== "玩家1" ? localPlayers[0] : ""}
+        onEnterMatch={(matchID, playerID, creds, players) => {
+          setOnline({ matchID, playerID, creds, players });
+          setScreen("onlineMatch");
+        }}
       />
-    </div>
-  );
+    );
+  }
+
+  /* -------- Online match -------- */
+  if (screen === "onlineMatch" && online) {
+    return (
+      <div className="rmk-table">
+        <div className="rmk-lobby-note" style={{ textAlign: "center", marginBottom: 8 }}>
+          房间号 <strong>{online.matchID}</strong> · 服务器 {getServerUrl()}
+          <button className="rmk-btn" style={{ marginLeft: 8, padding: "4px 10px", fontSize: 12 }} onClick={() => setScreen("menu")}>
+            退出房间
+          </button>
+        </div>
+        <OnlineGame
+          key={`${online.matchID}-${online.playerID}`}
+          matchID={online.matchID}
+          playerID={online.playerID}
+          credentials={online.creds}
+          matchData={online.players.map((name, i) => ({ id: String(i), name }))}
+        />
+      </div>
+    );
+  }
+
+  return null;
 }

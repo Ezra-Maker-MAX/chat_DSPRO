@@ -6,16 +6,22 @@ import { GAME_NAME } from "@/lib/rummikub/constants";
 
 /**
  * Connects to the boardgame.io server for online play.
- * Server URL: NEXT_PUBLIC_RUMMIKUB_SERVER (production) or http://localhost:9119 (dev).
+ * Priority: NEXT_PUBLIC_RUMMIKUB_SERVER env → production default (Railway) → localhost (dev).
  */
+export const RUMMIKUB_SERVER_PROD = "https://chatdspro-production.up.railway.app";
+
 export function getServerUrl(): string {
   const env = process.env.NEXT_PUBLIC_RUMMIKUB_SERVER;
   if (env) return env;
-  if (typeof window !== "undefined" && window.location.hostname === "localhost") {
+  if (typeof window !== "undefined") {
+    // Production: Vercel-hosted app → Railway socket server.
+    if (window.location.hostname !== "localhost" && window.location.hostname !== "127.0.0.1") {
+      return RUMMIKUB_SERVER_PROD;
+    }
+    // Local dev: assume the rummikub-server is running locally.
     return "http://localhost:9119";
   }
-  // Fallback: same host as the frontend (won't work unless reverse-proxied).
-  return window.location.origin;
+  return RUMMIKUB_SERVER_PROD;
 }
 
 export function makeLobbyClient(): LobbyClient {

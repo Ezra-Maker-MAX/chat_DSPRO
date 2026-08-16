@@ -3,8 +3,10 @@
 import { useState, useEffect } from "react";
 import { useParams } from "next/navigation";
 import { useI18n } from "@/lib/i18n";
-import { Gamepad2, Download, Trash2, Loader2, Puzzle, Wrench, Brain, Heart, ExternalLink, Bot } from "lucide-react";
+import { Gamepad2, Download, Trash2, Loader2, Puzzle, Wrench, Brain, Heart, ExternalLink, Bot, Dices } from "lucide-react";
 import RoleplayHub from "@/components/roleplay/RoleplayHub";
+import RummikubGame from "@/components/rummikub/RummikubGame";
+import "@/components/rummikub/rummikub.css";
 
 interface Plugin {
   id: string;
@@ -41,7 +43,7 @@ const categoryColors: Record<string, string> = {
 export default function GamesPage() {
   const { tenant } = useParams();
   const { t } = useI18n();
-  const [tab, setTab] = useState<"marketplace" | "characters">("marketplace");
+  const [tab, setTab] = useState<"marketplace" | "characters" | "rummikub">("marketplace");
   const [marketplace, setMarketplace] = useState<Plugin[]>([]);
   const [installed, setInstalled] = useState<InstalledPlugin[]>([]);
   const [loading, setLoading] = useState(true);
@@ -118,6 +120,13 @@ export default function GamesPage() {
             {t("games.tab.plugins")}
           </button>
           <button
+            onClick={() => setTab("rummikub")}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors text-[var(--color-text-muted)] hover:text-[var(--color-text-primary)]"
+          >
+            <Dices size={12} />
+            {t("games.tab.rummikub")}
+          </button>
+          <button
             onClick={() => setTab("characters")}
             className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium bg-[var(--color-teal-muted)] text-[var(--color-teal)]"
           >
@@ -127,6 +136,30 @@ export default function GamesPage() {
         </div>
         <div className="flex-1 overflow-hidden mt-3">
           <RoleplayHub />
+        </div>
+      </div>
+    );
+  }
+
+  if (tab === "rummikub") {
+    return (
+      <div className="h-dvh overflow-y-auto p-4 sm:p-6 pt-16 md:pt-6">
+        <div className="max-w-5xl mx-auto">
+          {/* Header */}
+          <div className="mb-6 flex items-center gap-3">
+            <div className="w-10 h-10 rounded-xl bg-[var(--color-accent-muted)] flex items-center justify-center">
+              <Dices size={20} className="text-[var(--color-accent-glow)]" />
+            </div>
+            <div>
+              <h1 className="font-[family-name:var(--font-display)] font-bold text-2xl">
+                拉密 Rummikub
+              </h1>
+              <p className="text-sm text-[var(--color-text-secondary)]">
+                {t("games.tab.rummikub")} — 经典数字麻将
+              </p>
+            </div>
+          </div>
+          <RummikubGame />
         </div>
       </div>
     );

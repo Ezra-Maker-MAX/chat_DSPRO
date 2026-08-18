@@ -53,6 +53,16 @@
   position: relative;
 }
 
+/* Each cell is hard-sized to one tile so tiles can never be stretched by the
+   grid's auto-sizing — guarantees a placed tile stays exactly tile-sized. */
+.rmk-grid-item {
+  width: var(--rmk-tile-w);
+  height: var(--rmk-tile-h);
+  min-width: 0;
+  min-height: 0;
+  display: flex;
+}
+
 /* ---------- Empty slot ---------- */
 .rmk-grid-slot {
   border-radius: 6px;

@@ -4,10 +4,10 @@
  */
 const HAND_ROWS = 2;
 const BOARD_ROWS = 9;
-const HAND_COLS = 22;
+const HAND_COLS = 17; // ~966px wide — fits inside the ~1000px game panel without horizontal overflow
 const TILES_TO_DRAW = 14;
 const FIRST_MOVE_SCORE_LIMIT = 30;
-const BOARD_COLS = 32;
+const BOARD_COLS = 15; // ~852px wide — fits on screen; a 13-tile run + buffer fits one row, melds stack downward
 const BOARD_GRID_ID = 'b';
 const HAND_GRID_ID = 'h';
 const GAME_NAME = 'Rummikub';
